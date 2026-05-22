@@ -75,8 +75,8 @@
 <body>
 
 <div class="container">
-    <h2>📊 Empirical Paradigm Performance Analysis</h2>
-    <p style="color: #64748b; margin-top: -5px;">Comparative structural telemetry data generated during cluster workload ingestion execution.</p>
+    <h2>📊 Architecture Empirical Performance Analysis</h2>
+    <p style="color: #64748b; margin-top: -5px;">Comparative telemetry data generated during cluster workload execution.</p>
 
     <div class="dashboard-layout">
         
@@ -118,19 +118,19 @@
                 </thead>
                 <tbody>
                     <tr>
-                        <td>Configured Computational Paradigm Model</td>
+                        <td>Configured Paradigm Model</td>
                         <td><strong style="color: #007bff;">{{ metrics.mode.upper() }}</strong></td>
                     </tr>
                     <tr>
-                        <td>Total Workload Ingested Volume</td>
+                        <td>Total Workload</td>
                         <td>{{ metrics.count }} Images</td>
                     </tr>
                     <tr>
-                        <td>Total Latency Clock Cost</td>
+                        <td>Total Latency </td>
                         <td>{{ total_time }} seconds</td>
                     </tr>
                     <tr>
-                        <td>System Compute Throughput Efficiency</td>
+                        <td>System Compute Throughput </td>
                         <td><strong>{{ metrics.throughput }} Images / Second</strong></td>
                     </tr>
                 </tbody>
