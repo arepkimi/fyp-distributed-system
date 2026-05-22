@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pipeline Operational Results</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background: #f8f9fa; color: #333; }
+        .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 900px; margin: 0 auto; }
+        .meta-banner { background: #e9ecef; padding: 15px; border-radius: 6px; margin-bottom: 20px; font-size: 1.1em; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 15px; margin-top: 20px; }
+        .img-container { background: #eee; padding: 10px; border-radius: 6px; text-align: center; }
+        .img-container img { max-width: 100%; height: auto; border-radius: 4px; }
+        .btn { display: inline-block; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; margin-right: 10px; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>✔ Execution Pipeline Processing Complete</h2>
+    
+    <div class="meta-banner">
+        Execution Mode Paradigm: <strong>{{ mode.upper() }}</strong> <br>
+        Total Compute Processing Latency: <strong>{{ total_time }} seconds</strong> <br>
+        Total Images Processed: <strong>{{ count }} files</strong>
+    </div>
+
+    <div class="navigation-controls" style="margin-bottom: 30px;">
+        <a href="/analysis" class="btn btn-primary">Proceed to In-Depth Empirical Analysis →</a>
+        <a href="/" class="btn btn-secondary">← Back to Main Menu</a>
+    </div>
+
+    <h3>Standardized Image Preview Manifest</h3>
+    <div class="grid">
+        {% for item in results %}
+        <div class="img-container">
+            <p style="font-size: 0.8em; word-break: break-all;">{{ item.filename }}</p>
+            <img src="data:image/jpeg;base64,{{ item.data }}" alt="Processed Preview Output">
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+</body>
+</html>

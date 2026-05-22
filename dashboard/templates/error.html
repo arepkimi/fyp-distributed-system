@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Pipeline Execution Failure</title>
+    <style>
+        body { font-family: sans-serif; margin: 40px; background: #fff5f5; text-align: center; }
+        .error-card { background: white; padding: 40px; border-radius: 8px; border: 1px solid #f5c6cb; box-shadow: 0 4px 6px rgba(0,0,0,0.05); max-width: 600px; margin: 0 auto; }
+        .error-box { background: #f8d7da; color: #721c24; padding: 15px; border-radius: 4px; font-family: monospace; text-align: left; word-break: break-all; margin: 20px 0; }
+        .btn { display: inline-block; padding: 10px 20px; background: #dc3545; color: white; text-decoration: none; border-radius: 4px; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="error-card">
+    <h1 style="color: #dc3545; margin-top: 0;">⚠️ Pipeline Interruption Encountered</h1>
+    <p>Sorry, the application software encountered an infrastructural execution constraint or worker node failure state.</p>
+    
+    <div class="error-box">
+        <strong>Diagnostic Logs:</strong><br>
+        {{ error_msg }}
+    </div>
+
+    <div style="margin-top: 30px;">
+        <a href="/" class="btn">← Back to Main Menu</a>
+    </div>
+</div>
+
+</body>
+</html>

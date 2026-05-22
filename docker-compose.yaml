@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  # -----------------------------------------------------------------------
+  # 1. FRONTEND WORKLOAD: FLASK DASHBOARD INTERFACE GATEWAY
+  # -----------------------------------------------------------------------
+  dashboard-gateway:
+    build:
+      context: ./dashboard  # Relative path pointing into your dashboard folder
+    container_name: local-dashboard
+    ports:
+      - "5000:5000"  # Exposes your Flask app to http://localhost:5000
+    environment:
+      # We override the localhost defaults inside app.py using Docker's internal DNS names
+      - BW_ADDR=bw-worker-node:50051
+      - BRIGHT_ADDR=bright-worker-node:50052
+      - BLUR_ADDR=blur-worker-node:50053
+    depends_on:
+      - bw-worker
+      - bright-worker
+      - blur-worker
+
+  # -----------------------------------------------------------------------
+  # 2. BACKEND WORKLOAD: BLACK & WHITE GRPC MICROSERVICE TIER
+  # -----------------------------------------------------------------------
+  bw-worker:
+    build:
+      context: ./bw-service
+    container_name: bw-worker-node
+    ports:
+      - "50051:50051"
+
+  # -----------------------------------------------------------------------
+  # 3. BACKEND WORKLOAD: BRIGHTNESS BOOST GRPC MICROSERVICE TIER
+  # -----------------------------------------------------------------------
+  bright-worker:
+    build:
+      context: ./bright-service
+    container_name: bright-worker-node
+    ports:
+      - "50052:50052"
+
+  # -----------------------------------------------------------------------
+  # 4. BACKEND WORKLOAD: GAUSSIAN BLUR GRPC MICROSERVICE TIER
+  # -----------------------------------------------------------------------
+  blur-worker:
+    build:
+      context: ./blur-service
+    container_name: blur-worker-node
+    ports:
+      - "50053:50053"
