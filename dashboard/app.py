@@ -76,9 +76,11 @@ def process():
                 futures = [executor.submit(run_distributed_chain, f['bytes']) for f in files_to_process]
                 processed_outputs = [f.result() for f in futures]
         elif mode == 'parallel':
-            raw_bytes_list = [f['bytes'] for f in files_to_process]
-            with ProcessPoolExecutor() as executor:
-                processed_outputs = list(executor.map(monolith.process_image_to_bytes, raw_bytes_list))
+            # UPDATED: Lazy memory streaming loop using generator mapping to prevent massive RAM overhead spikes
+            raw_bytes_generator = (f['bytes'] for f in files_to_process)
+            # CHANGED: Elevated max_workers to 3 to handle batches across 3 parallel CPU child processes
+            with ProcessPoolExecutor(max_workers=3) as executor:
+                processed_outputs = list(executor.map(monolith.process_image_to_bytes, raw_bytes_generator))
         else:
             # CORRECTED: Loop using the exact updated function name from monolith.py
             processed_outputs = [monolith.process_image_to_bytes(f['bytes']) for f in files_to_process]
