@@ -192,3 +192,54 @@ spec:
   ports:
   - port: 50053
     targetPort: 50053
+
+---
+# -----------------------------------------------------------------------
+# 5. TELEMETRY VISUALIZATION TIER: GRAFANA INFRASTRUCTURE (1 REPLICA)
+# -----------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fyp-grafana-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fyp-grafana
+  template:
+    metadata:
+      labels:
+        app: fyp-grafana
+    spec:
+      containers:
+      - name: grafana-container
+        image: grafana/grafana:latest
+        ports:
+        - containerPort: 3000
+        # CRITICAL EMBEDDING AND SECURE CROSS-ORIGIN COOKIE PATCHES
+        env:
+        - name: GF_SECURITY_ALLOW_EMBEDDING
+          value: "true"
+        - name: GF_SECURITY_COOKIE_SECURE
+          value: "true"
+        - name: GF_SECURITY_COOKIE_SAME_SITE
+          value: "none"
+        resources:
+          requests:
+            cpu: "250m"
+            memory: "512Mi"
+          limits:
+            cpu: "500m"
+            memory: "1Gi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: grafana-dns-service
+spec:
+  type: ClusterIP  # Kept inside the internal virtual network for data visualization proxy queries
+  selector:
+    app: fyp-grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
