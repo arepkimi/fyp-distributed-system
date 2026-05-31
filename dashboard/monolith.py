@@ -21,3 +21,17 @@ def process_image_to_bytes(image_bytes):
     # 3. Re-encode the matrix back into a raw JPG binary byte stream
     _, buffer = cv2.imencode('.jpg', img)
     return buffer.tobytes()
+
+def process_batch_of_images(image_batch):
+    """
+    COARSE-GRAINED ACCELERATION LOGIC: Loops through an entire array chunk 
+    locally within the assigned child process memory to avoid frequent OS IPC taxes.
+    """
+    batch_results = []
+    for item in image_batch:
+        try:
+            out_bytes = process_image_to_bytes(item['bytes'])
+            batch_results.append(out_bytes)
+        except Exception:
+            batch_results.append(None)
+    return batch_results
