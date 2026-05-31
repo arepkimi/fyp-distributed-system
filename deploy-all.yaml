@@ -63,7 +63,7 @@ kind: Deployment
 metadata:
   name: bw-worker-deployment
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: bw-worker
@@ -110,7 +110,7 @@ kind: Deployment
 metadata:
   name: bright-worker-deployment
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: bright-worker
@@ -156,7 +156,7 @@ kind: Deployment
 metadata:
   name: blur-worker-deployment
 spec:
-  replicas: 1
+  replicas: 3
   selector:
     matchLabels:
       app: blur-worker
