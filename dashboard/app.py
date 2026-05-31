@@ -70,19 +70,33 @@ def process():
 
     try:
         # EXECUTION MANAGEMENT ROUTER
-        # --- Inside @app.route('/process', methods=['POST']) ---
         if mode == 'distributed':
-            with ThreadPoolExecutor(max_workers=5) as executor:
+            # Configured to max 10 concurrent network pipelines
+            with ThreadPoolExecutor(max_workers=10) as executor:
                 futures = [executor.submit(run_distributed_chain, f['bytes']) for f in files_to_process]
                 processed_outputs = [f.result() for f in futures]
+                
         elif mode == 'parallel':
-            # UPDATED: Lazy memory streaming loop using generator mapping to prevent massive RAM overhead spikes
-            raw_bytes_generator = (f['bytes'] for f in files_to_process)
-            # CHANGED: Elevated max_workers to 3 to handle batches across 3 parallel CPU child processes
-            with ProcessPoolExecutor(max_workers=3) as executor:
-                processed_outputs = list(executor.map(monolith.process_image_to_bytes, raw_bytes_generator))
+            # Dynamically breaks your dataset down to map across 3 CPU hardware processes
+            num_cores = 3
+            def chunkify(lst, n):
+                return [lst[i::n] for i in range(n)]
+            
+            file_chunks = chunkify(files_to_process, num_cores)
+            
+            with ProcessPoolExecutor(max_workers=num_cores) as executor:
+                futures = [executor.submit(monolith.process_batch_of_images, chunk) for chunk in file_chunks]
+                
+                # Re-assemble chunked lists back into a single flat array sequentially
+                chunk_outputs = [f.result() for f in futures]
+                processed_outputs = [None] * len(files_to_process)
+                for chunk_idx, chunk_res in enumerate(chunk_outputs):
+                    for item_idx, out_bytes in enumerate(chunk_res):
+                        original_index = item_idx * num_cores + chunk_idx
+                        if original_index < len(files_to_process):
+                            processed_outputs[original_index] = out_bytes
         else:
-            # CORRECTED: Loop using the exact updated function name from monolith.py
+            # Monolithic local sequential loop
             processed_outputs = [monolith.process_image_to_bytes(f['bytes']) for f in files_to_process]
 
         # Packaging outcomes back into the Session State Memory
@@ -116,6 +130,19 @@ def process():
 
     except (grpc.RpcError, Exception) as infrastructure_fault:
         return render_template('error.html', error_msg=str(infrastructure_fault)), 503
+
+@app.route('/update_metrics', methods=['POST'])
+def update_metrics():
+    try:
+        data = request.get_json() or {}
+        js_time = float(data.get('e2e_time', SESSION_CACHE['total_time']))
+        SESSION_CACHE['total_time'] = js_time
+        if 'metrics' in SESSION_CACHE and SESSION_CACHE['metrics'].get('count', 0) > 0:
+            count = SESSION_CACHE['metrics']['count']
+            SESSION_CACHE['metrics']['throughput'] = round(count / js_time, 2)
+        return {"status": "success"}, 200
+    except Exception:
+        return {"status": "ignored"}, 200
 
 @app.route('/analysis')
 def analysis():
