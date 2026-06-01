@@ -197,6 +197,9 @@ spec:
 # -----------------------------------------------------------------------
 # 5. TELEMETRY VISUALIZATION TIER: GRAFANA INFRASTRUCTURE (1 REPLICA)
 # -----------------------------------------------------------------------
+# -----------------------------------------------------------------------
+# 5. TELEMETRY VISUALIZATION TIER: GRAFANA INFRASTRUCTURE (1 REPLICA)
+# -----------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -216,7 +219,6 @@ spec:
         image: grafana/grafana:latest
         ports:
         - containerPort: 3000
-        # CRITICAL EMBEDDING AND SECURE CROSS-ORIGIN COOKIE PATCHES
         env:
         - name: GF_SECURITY_ALLOW_EMBEDDING
           value: "true"
@@ -224,6 +226,11 @@ spec:
           value: "true"
         - name: GF_SECURITY_COOKIE_SAME_SITE
           value: "none"
+        # ---- ADD THESE TWO NEW ANONYMOUS PASS ENVIRONMENT VARIABLES ----
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: "Viewer"
         resources:
           requests:
             cpu: "250m"
@@ -237,9 +244,9 @@ kind: Service
 metadata:
   name: grafana-dns-service
 spec:
-  type: ClusterIP  # Kept inside the internal virtual network for data visualization proxy queries
+  type: LoadBalancer  # <--- CHANGE THIS FROM ClusterIP TO LoadBalancer
   selector:
     app: fyp-grafana
   ports:
-  - port: 3000
-    targetPort: 3000
+  - port: 80          # Run it on standard web port 80
+    targetPort: 3000  # Map it internally back to Grafana's 3000
