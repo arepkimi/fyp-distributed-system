@@ -197,9 +197,6 @@ spec:
 # -----------------------------------------------------------------------
 # 5. TELEMETRY VISUALIZATION TIER: GRAFANA INFRASTRUCTURE (1 REPLICA)
 # -----------------------------------------------------------------------
-# -----------------------------------------------------------------------
-# 5. TELEMETRY VISUALIZATION TIER: GRAFANA INFRASTRUCTURE (1 REPLICA)
-# -----------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -226,7 +223,6 @@ spec:
           value: "true"
         - name: GF_SECURITY_COOKIE_SAME_SITE
           value: "none"
-        # ---- ADD THESE TWO NEW ANONYMOUS PASS ENVIRONMENT VARIABLES ----
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
         - name: GF_AUTH_ANONYMOUS_ORG_ROLE
@@ -244,9 +240,10 @@ kind: Service
 metadata:
   name: grafana-dns-service
 spec:
-  type: LoadBalancer  # <--- CHANGE THIS FROM ClusterIP TO LoadBalancer
+  type: LoadBalancer
   selector:
     app: fyp-grafana
   ports:
-  - port: 80          # Run it on standard web port 80
-    targetPort: 3000  # Map it internally back to Grafana's 3000
+  - name: http           # <--- FIXED: Explicit port target routing key
+    port: 80
+    targetPort: 3000
