@@ -268,7 +268,7 @@ spec:
         image: grafana/grafana:latest
         ports:
         - containerPort: 3000
-       env:
+        env:
         - name: GF_SECURITY_ALLOW_EMBEDDING
           value: "true"
         - name: GF_SECURITY_COOKIE_SECURE
