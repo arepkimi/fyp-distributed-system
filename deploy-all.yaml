@@ -15,6 +15,18 @@ spec:
       labels:
         app: fyp-dashboard
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - bw-worker
+                - bright-worker
+                - blur-worker
+            topologyKey: "kubernetes.io/hostname"  # Prevents sharing a node with any distributed worker
       containers:
       - name: gateway-container
         image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/dashboard-gateway:latest
@@ -27,7 +39,6 @@ spec:
           limits:
             cpu: "4"
             memory: "4Gi"
-        # FAULT TOLERANCE: Check if the Flask web server interface is completely locked up
         livenessProbe:
           httpGet:
             path: /
@@ -47,7 +58,7 @@ kind: Service
 metadata:
   name: fyp-dashboard-service
 spec:
-  type: LoadBalancer       # Creates your public external Cloud IP routing to your dashboard browser interface
+  type: LoadBalancer       
   selector:
     app: fyp-dashboard
   ports:
@@ -63,7 +74,7 @@ kind: Deployment
 metadata:
   name: bw-worker-deployment
 spec:
-  replicas: 3
+  replicas: 1  # Optimized from 3 replicas down to 1
   selector:
     matchLabels:
       app: bw-worker
@@ -72,12 +83,23 @@ spec:
       labels:
         app: bw-worker
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - fyp-dashboard
+                - bright-worker
+                - blur-worker
+            topologyKey: "kubernetes.io/hostname"  # Hard segregation from all other cluster applications
       containers:
       - name: bw-container
         image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/bw-worker:latest
         ports:
         - containerPort: 50051
-        # FAULT TOLERANCE: TCP stream checking ensures the gRPC service port is actively listening
         livenessProbe:
           tcpSocket:
             port: 50051
@@ -94,7 +116,7 @@ kind: Service
 metadata:
   name: bw-dns-service
 spec:
-  type: ClusterIP  # Locks communication strictly within the secure internal virtual cloud network
+  type: ClusterIP  
   selector:
     app: bw-worker
   ports:
@@ -110,7 +132,7 @@ kind: Deployment
 metadata:
   name: bright-worker-deployment
 spec:
-  replicas: 3
+  replicas: 1  # Optimized from 3 replicas down to 1
   selector:
     matchLabels:
       app: bright-worker
@@ -119,6 +141,18 @@ spec:
       labels:
         app: bright-worker
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - fyp-dashboard
+                - bw-worker
+                - blur-worker
+            topologyKey: "kubernetes.io/hostname"  # Enforces a unique hardware machine for Brightness
       containers:
       - name: bright-container
         image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/bright-worker:latest
@@ -156,7 +190,7 @@ kind: Deployment
 metadata:
   name: blur-worker-deployment
 spec:
-  replicas: 3
+  replicas: 1  # Optimized from 3 replicas down to 1
   selector:
     matchLabels:
       app: blur-worker
@@ -165,6 +199,18 @@ spec:
       labels:
         app: blur-worker
     spec:
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - fyp-dashboard
+                - bw-worker
+                - bright-worker
+            topologyKey: "kubernetes.io/hostname"  # Enforces a unique hardware machine for Blurring
       containers:
       - name: blur-container
         image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/blur-worker:latest
@@ -244,6 +290,6 @@ spec:
   selector:
     app: fyp-grafana
   ports:
-  - name: http           # <--- FIXED: Explicit port target routing key
+  - name: http           
     port: 80
     targetPort: 3000
