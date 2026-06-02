@@ -6,7 +6,7 @@ kind: Deployment
 metadata:
   name: fyp-dashboard-deployment
 spec:
-  replicas: 1  
+  replicas: 1  # Kept at 1 so your web session endpoint remains singular
   selector:
     matchLabels:
       app: fyp-dashboard
@@ -26,7 +26,7 @@ spec:
                 - bw-worker
                 - bright-worker
                 - blur-worker
-            topologyKey: "kubernetes.io/hostname"  # Direct hardware isolation
+            topologyKey: "kubernetes.io/hostname"
       containers:
       - name: gateway-container
         image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/dashboard-gateway:latest
@@ -34,7 +34,7 @@ spec:
         - containerPort: 5000
         resources:
           requests:
-            cpu: "3"         # Guarantees 3 cores on Node 1 for local Parallel execution testing
+            cpu: "3"         
             memory: "3Gi"    
           limits:
             cpu: "4"
@@ -67,14 +67,14 @@ spec:
 
 ---
 # -----------------------------------------------------------------------
-# 2. MICROSERVICE TIER: BLACK & WHITE WORKER POD (Node 2)
+# 2. MICROSERVICE TIER: BLACK & WHITE WORKER PODS (Node 2 - 2 Pods)
 # -----------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: bw-worker-deployment
 spec:
-  replicas: 1  
+  replicas: 2  # Bumped to 2 for Active Redundancy
   selector:
     matchLabels:
       app: bw-worker
@@ -94,7 +94,7 @@ spec:
                 - fyp-dashboard
                 - bright-worker
                 - blur-worker
-            topologyKey: "kubernetes.io/hostname"
+            topologyKey: "kubernetes.io/hostname" # Ensures no co-location with other worker types
       containers:
       - name: bw-container
         image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/bw-worker:latest
@@ -102,8 +102,8 @@ spec:
         - containerPort: 50051
         resources:
           requests:
-            cpu: "1"         # Forced resource allocation to trigger hardware node scaling
-            memory: "1Gi"
+            cpu: "500m"      # Split allocation so 2 pods fit comfortably onto 1 host node
+            memory: "512Mi"
           limits:
             cpu: "1"
             memory: "1Gi"
@@ -127,14 +127,14 @@ spec:
 
 ---
 # -----------------------------------------------------------------------
-# 3. MICROSERVICE TIER: BRIGHTNESS BOOST WORKER POD (Node 3)
+# 3. MICROSERVICE TIER: BRIGHTNESS BOOST WORKER PODS (Node 3 - 2 Pods)
 # -----------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: bright-worker-deployment
 spec:
-  replicas: 1  
+  replicas: 2  # Bumped to 2 for Active Redundancy
   selector:
     matchLabels:
       app: bright-worker
@@ -162,8 +162,8 @@ spec:
         - containerPort: 50052
         resources:
           requests:
-            cpu: "1"         # Forced resource allocation to trigger hardware node scaling
-            memory: "1Gi"
+            cpu: "500m"
+            memory: "512Mi"
           limits:
             cpu: "1"
             memory: "1Gi"
@@ -187,14 +187,14 @@ spec:
 
 ---
 # -----------------------------------------------------------------------
-# 4. MICROSERVICE TIER: GAUSSIAN BLUR WORKER POD (Node 4)
+# 4. MICROSERVICE TIER: GAUSSIAN BLUR WORKER PODS (Node 4 - 2 Pods)
 # -----------------------------------------------------------------------
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: blur-worker-deployment
 spec:
-  replicas: 1  
+  replicas: 2  # Bumped to 2 for Active Redundancy
   selector:
     matchLabels:
       app: blur-worker
@@ -222,8 +222,8 @@ spec:
         - containerPort: 50053
         resources:
           requests:
-            cpu: "1"         # Forced resource allocation to trigger hardware node scaling
-            memory: "1Gi"
+            cpu: "500m"
+            memory: "512Mi"
           limits:
             cpu: "1"
             memory: "1Gi"
