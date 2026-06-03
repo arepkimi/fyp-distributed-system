@@ -170,7 +170,7 @@ kind: Deployment
 metadata:
   name: blur-worker-deployment
 spec:
-  replicas: 2# <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
+  replicas: 2 # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
   selector:
     matchLabels:
       app: blur-worker
