@@ -29,20 +29,17 @@ BW_WORKER_ADDR = os.getenv('BW_ADDR', 'dns:///bw-dns-service:50051')
 GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
 
 
-def push_to_assembly_line_shared(filename, image_bytes):
+def push_to_assembly_line_shared(filename, image_bytes, stub):
     """
-    FIXED: Establishes an independent, thread-safe gRPC network context.
-    This guarantees that concurrent threads resolve through the load balancer's
-    round-robin channel definitions independently instead of sticking to a single socket pointer.
+    OPTIMIZED: Reuses the active batch stub passed from the thread executor pool context.
+    This eliminates the massive network handshake overhead of opening/closing sockets per file.
     """
     try:
-        with grpc.insecure_channel(BW_WORKER_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as channel:
-            local_stub = photo_pb2_grpc.PhotoProcessorStub(channel)
-            metadata = (('filename', filename),)
-            resp = local_stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=10)
-            
-            if resp.processed_data == b"ACK_BW":
-                return True
+        metadata = (('filename', filename),)
+        resp = stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=10)
+        
+        if resp.processed_data == b"ACK_BW":
+            return True
     except grpc.RpcError as e:
         print(f"Failed to split-route {filename} onto assembly line: {e}")
     return False
@@ -96,10 +93,14 @@ def process():
     try:
         # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # Fire data pipeline downstream to Stage 1
-            with ThreadPoolExecutor(max_workers=20) as executor:
-                futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes']) for f in files_to_process]
-                results = [f.result() for f in futures]
+            # --- IMPLEMENTED IDEA: Open ONE single connection channel pool context for this entire batch run ---
+            with grpc.insecure_channel(BW_WORKER_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as batch_channel:
+                batch_stub = photo_pb2_grpc.PhotoProcessorStub(batch_channel)
+                
+                # Share the active batch_stub across your 20 threads to eliminate handshake latency stalls
+                with ThreadPoolExecutor(max_workers=20) as executor:
+                    futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes'], batch_stub) for f in files_to_process]
+                    results = [f.result() for f in futures]
 
             expected_count = len(files_to_process)
             timeout = 45  
