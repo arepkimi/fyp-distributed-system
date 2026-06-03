@@ -56,7 +56,7 @@ def push_to_assembly_line_shared(filename, image_bytes):
 
 
 # -----------------------------------------------------------------------
-# NEW: LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
+# LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
 # -----------------------------------------------------------------------
 @app.route('/receiver', methods=['POST'])
 def receive_completed_image():
@@ -103,8 +103,9 @@ def process():
     try:
         # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # Fire data pipeline downstream to Stage 1
-            with ThreadPoolExecutor(max_workers=20) as executor:
+            # --- FIXED: SWAPPED TO PROCESS POOL TO SHATTER THE GIL BOTTLENECK ---
+            # Using 3 multi-core worker processes feeds your scaled gRPC pipeline instantly
+            with ProcessPoolExecutor(max_workers=3) as executor:
                 futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes']) for f in files_to_process]
                 results = [f.result() for f in futures]
 
@@ -115,7 +116,7 @@ def process():
             elapsed = 0
             start_poll = time.time()
 
-            # --- FIXED: POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
+            # --- POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
             while len(DISTRIBUTED_MEMORY_CACHE) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
                 elapsed = time.time() - start_poll
