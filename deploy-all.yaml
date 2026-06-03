@@ -218,18 +218,17 @@ spec:
       labels:
         app: blur-worker
     spec:
+      # --- FIXED: FORCE CO-LOCATION WITH DASHBOARD TO SHARE DISK SECURELY ---
       affinity:
-        podAntiAffinity:
-          preferredDuringSchedulingIgnoredDuringExecution:
-          - weight: 100
-            podAffinityTerm:
-              labelSelector:
-                matchExpressions:
-                - key: app
-                  operator: In
-                  values:
-                  - blur-worker
-              topologyKey: "kubernetes.io/hostname"
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchExpressions:
+              - key: app
+                operator: In
+                values:
+                - fyp-dashboard
+            topologyKey: "kubernetes.io/hostname"
       containers:
       - name: blur-container
         image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/blur-worker:latest
