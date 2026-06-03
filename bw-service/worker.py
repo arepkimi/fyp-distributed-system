@@ -6,11 +6,11 @@ from concurrent import futures
 import photo_pb2
 import photo_pb2_grpc
 
-# CRITICAL: Prepend 'dns:///' prefix so gRPC pulls individual pod IPs from K8s DNS
+# Prepend 'dns:///' prefix so gRPC pulls individual pod IPs from K8s DNS
 NEXT_STAGE_ADDR = os.getenv('BRIGHT_ADDR', 'dns:///bright-dns-service:50052')
 
 # -----------------------------------------------------------------------
-# NEW: GLOBAL ROUND-ROBIN CONNECTION POOLING FOR DOWNSTREAM SCALE
+# GLOBAL ROUND-ROBIN CONNECTION POOLING FOR DOWNSTREAM SCALE
 # -----------------------------------------------------------------------
 # This explicit config forces gRPC to rotate pods on EVERY single image payload sent to Stage 2
 GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
@@ -41,13 +41,13 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
         _, buffer = cv2.imencode('.jpg', result)
         bw_bytes = buffer.tobytes()
 
-        # 2. FIXED HANDOFF: Uses persistent global round-robin stub to distribute work
+        # 2. HANDOFF: Uses persistent global round-robin stub to distribute work down the chain
         try:
             # Pass the image data and forward the tracking metadata headers downstream
             global_stub.Process(
                 photo_pb2.PhotoRequest(image_data=bw_bytes),
                 metadata=metadata,
-                timeout=10  # Relaxed slightly to account for high-concurrency pipeline queues safely
+                timeout=10  
             )
         except grpc.RpcError as e:
             print(f"Assembly line load-split handoff failed from B&W to Brighten: {e}")
@@ -66,6 +66,7 @@ def serve():
     server.start()
     server.wait_for_termination()
 
+
 if __name__ == '__main__':
-    print(f"B&W Worker (Assembly Stage 1) is running on Port 50051, load-balancing to {NEXT_STAGE_ADDR}...")
+    print(f"B&W Worker (Assembly Stage 1) is running on Port 50051, receiving distributed load...")
     serve()
