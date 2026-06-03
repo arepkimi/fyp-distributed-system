@@ -21,18 +21,15 @@ SESSION_CACHE = {
     'batch_results': []
 }
 
+# High-speed memory cache array to track incoming finished images from the network loop
+DISTRIBUTED_MEMORY_CACHE = {}
+
 # The Dashboard only needs to talk directly to the entry point (Stage 1)
-# CRITICAL: We add 'dns:///' prefix so gRPC resolves individual pod IPs directly
 BW_WORKER_ADDR = os.getenv('BW_ADDR', 'dns:///bw-dns-service:50051')
 
-# The shared local output folder where Blur Worker drops completed images
-SHARED_OUTPUT_DIR = "/app/shared_output"
-os.makedirs(SHARED_OUTPUT_DIR, exist_ok=True)
-
 # -----------------------------------------------------------------------
-# NEW: SETUP GLOBAL ROUND-ROBIN CHANNEL POOL FOR DISTRIBUTED SCALE
+# SETUP GLOBAL ROUND-ROBIN CHANNEL POOL FOR DISTRIBUTED SCALE
 # -----------------------------------------------------------------------
-# This explicit config forces gRPC to rotate pods on EVERY single message payload
 GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
 
 global_channel = grpc.insecure_channel(
@@ -48,9 +45,7 @@ def push_to_assembly_line_shared(filename, image_bytes):
     evenly across all available scale replicas.
     """
     try:
-        # Send filename in metadata so it travels down the line
         metadata = (('filename', filename),)
-        # Timeout extended slightly to handle cloud network queue depths comfortably
         resp = global_stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=10)
         
         if resp.processed_data == b"ACK_BW":
@@ -58,6 +53,20 @@ def push_to_assembly_line_shared(filename, image_bytes):
     except grpc.RpcError as e:
         print(f"Failed to split-route {filename} onto assembly line: {e}")
     return False
+
+
+# -----------------------------------------------------------------------
+# NEW: LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
+# -----------------------------------------------------------------------
+@app.route('/receiver', methods=['POST'])
+def receive_completed_image():
+    if 'image' in request.files and 'filename' in request.form:
+        file = request.files['image']
+        filename = request.form['filename']
+        # Intercept bytes directly from the network cable into cluster RAM
+        DISTRIBUTED_MEMORY_CACHE[filename] = file.read()
+        return "ACK_RECEIVE", 200
+    return "BAD_REQUEST", 400
 
 
 @app.route('/')
@@ -84,11 +93,9 @@ def process():
     else:
         files_to_process.append({'filename': uploaded_file.filename, 'bytes': file_content})
 
+    # Flush the memory matrix before launching a distributed batch test
     if mode == 'distributed':
-        for f in os.listdir(SHARED_OUTPUT_DIR):
-            file_path = os.path.join(SHARED_OUTPUT_DIR, f)
-            if os.path.isfile(file_path):
-                os.remove(file_path)
+        DISTRIBUTED_MEMORY_CACHE.clear()
 
     start_time = time.time()
     processed_outputs = []
@@ -96,30 +103,28 @@ def process():
     try:
         # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # Bumped to 20 threads to saturate your cluster scaling endpoints simultaneously
+            # Fire data pipeline downstream to Stage 1
             with ThreadPoolExecutor(max_workers=20) as executor:
                 futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes']) for f in files_to_process]
                 results = [f.result() for f in futures]
 
-            # Wait for the last stage (Blur Worker) to finish writing the images to the shared disk
             expected_count = len(files_to_process)
-            timeout = 45  # Extended for larger batches of 1,000 items
-            check_interval = 0.05  # Faster polling to minimize dashboard delay metrics
+            timeout = 45  
+            check_interval = 0.05  
 
-            # --- FIXED: INITIALIZE AND ACCURATELY TRACK ELAPSED TIMER ---
             elapsed = 0
             start_poll = time.time()
 
-            while len(os.listdir(SHARED_OUTPUT_DIR)) < expected_count and elapsed < timeout:
+            # --- FIXED: POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
+            while len(DISTRIBUTED_MEMORY_CACHE) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
                 elapsed = time.time() - start_poll
 
-            # Read the files back out of the assembly line final station disk space
+            # Map compiled memory pieces back to output arrays sequentially
             for item in files_to_process:
-                saved_path = os.path.join(SHARED_OUTPUT_DIR, item['filename'])
-                if os.path.exists(saved_path):
-                    with open(saved_path, 'rb') as sf:
-                        processed_outputs.append(sf.read())
+                filename = item['filename']
+                if filename in DISTRIBUTED_MEMORY_CACHE:
+                    processed_outputs.append(DISTRIBUTED_MEMORY_CACHE[filename])
                 else:
                     processed_outputs.append(None)
                 
