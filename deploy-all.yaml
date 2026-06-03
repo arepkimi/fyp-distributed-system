@@ -20,7 +20,7 @@ kind: Deployment
 metadata:
   name: fyp-dashboard-deployment
 spec:
-  replicas: 1  # EDIT THIS NUMBER TO SCALE THE FLASK GATEWAY
+  replicas: 1  # DASHBOARD CONFIGURED TO 1 REPLICA AS REQUESTED
   selector:
     matchLabels:
       app: fyp-dashboard
@@ -36,11 +36,11 @@ spec:
         - containerPort: 5000
         resources:
           requests:
-            cpu: "3"         
-            memory: "3Gi"    
+            cpu: "500m"         # Scaled down from 3 to bypass Insufficient CPU blocks
+            memory: "1Gi"       # Scaled down from 3Gi to bypass Insufficient Memory blocks
           limits:
-            cpu: "4"
-            memory: "4Gi"
+            cpu: "1"
+            memory: "2Gi"
         livenessProbe:
           httpGet:
             path: /
@@ -83,7 +83,7 @@ kind: Deployment
 metadata:
   name: bw-worker-deployment
 spec:
-  replicas: 2  # EDIT THIS NUMBER TO SCALE STAGE 1 WORKERS
+  replicas: 2  # WORKER TIER 1 CONFIGURED TO 2 REPLICAS
   selector:
     matchLabels:
       app: bw-worker
@@ -146,7 +146,7 @@ kind: Deployment
 metadata:
   name: bright-worker-deployment
 spec:
-  replicas: 2  # EDIT THIS NUMBER TO SCALE STAGE 2 WORKERS
+  replicas: 2  # WORKER TIER 2 CONFIGURED TO 2 REPLICAS
   selector:
     matchLabels:
       app: bright-worker
@@ -209,7 +209,7 @@ kind: Deployment
 metadata:
   name: blur-worker-deployment
 spec:
-  replicas: 2  # EDIT THIS NUMBER TO SCALE STAGE 3 WORKERS
+  replicas: 2  # WORKER TIER 3 CONFIGURED TO 2 REPLICAS
   selector:
     matchLabels:
       app: blur-worker
