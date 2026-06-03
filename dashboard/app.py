@@ -21,27 +21,31 @@ SESSION_CACHE = {
     'batch_results': []
 }
 
-WORKERS = {
-    'B&W': os.getenv('BW_ADDR', 'localhost:50051'),
-    'Brighten': os.getenv('BRIGHT_ADDR', 'localhost:50052'),
-    'Blur': os.getenv('BLUR_ADDR', 'localhost:50053')
-}
+# The Dashboard only needs to talk directly to the entry point (Stage 1)
+BW_WORKER_ADDR = os.getenv('BW_ADDR', 'localhost:50051')
 
-def call_worker(addr, image_data):
-    with grpc.insecure_channel(addr) as channel:
-        stub = photo_pb2_grpc.PhotoProcessorStub(channel)
-        resp = stub.Process(photo_pb2.PhotoRequest(image_data=image_data), timeout=5)
-        return resp.processed_data
+# The shared local output folder where Blur Worker drops completed images
+SHARED_OUTPUT_DIR = "/app/shared_output"
+os.makedirs(SHARED_OUTPUT_DIR, exist_ok=True)
 
-def run_distributed_chain(image_bytes):
-    current_data = image_bytes
-    for name, addr in WORKERS.items():
-        processed = call_worker(addr, current_data)
-        if processed:
-            current_data = processed
-        else:
-            raise grpc.RpcError(f"Worker Node failure encountered at: {name}")
-    return current_data
+def push_to_assembly_line(filename, image_bytes):
+    """
+    Drops an image onto Stage 1 (B&W Worker) of the assembly line conveyor belt.
+    Passes the filename as metadata so subsequent services can track the image.
+    """
+    try:
+        with grpc.insecure_channel(BW_WORKER_ADDR) as channel:
+            stub = photo_pb2_grpc.PhotoProcessorStub(channel)
+            # Send filename in metadata so it travels down the line
+            metadata = (('filename', filename),)
+            resp = stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=5)
+            
+            # If it safely entered the assembly line, return True
+            if resp.processed_data == b"ACK_BW":
+                return True
+    except grpc.RpcError as e:
+        print(f"Failed to drop {filename} onto assembly line: {e}")
+    return False
 
 @app.route('/')
 def index():
@@ -61,9 +65,19 @@ def process():
         with zipfile.ZipFile(io.BytesIO(file_content)) as incoming_zip:
             for f in incoming_zip.namelist():
                 if f.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    files_to_process.append({'filename': f, 'bytes': incoming_zip.read(f)})
+                    # Keep path clean of subdirectory strings if nested in zip
+                    clean_filename = os.path.basename(f)
+                    if clean_filename:
+                        files_to_process.append({'filename': clean_filename, 'bytes': incoming_zip.read(f)})
     else:
         files_to_process.append({'filename': uploaded_file.filename, 'bytes': file_content})
+
+    # Clean out the shared directory before starting a new distributed batch run
+    if mode == 'distributed':
+        for f in os.listdir(SHARED_OUTPUT_DIR):
+            file_path = os.path.join(SHARED_OUTPUT_DIR, f)
+            if os.path.isfile(file_path):
+                os.remove(file_path)
 
     start_time = time.time()
     processed_outputs = []
@@ -71,13 +85,32 @@ def process():
     try:
         # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # Configured to max 10 concurrent network pipelines
+            # 10 pipeline workers concurrently throwing images onto the belt
             with ThreadPoolExecutor(max_workers=10) as executor:
-                futures = [executor.submit(run_distributed_chain, f['bytes']) for f in files_to_process]
-                processed_outputs = [f.result() for f in futures]
+                futures = [executor.submit(push_to_assembly_line, f['filename'], f['bytes']) for f in files_to_process]
+                # Wait until all acknowledgements are received (everything enters the line)
+                results = [f.result() for f in futures]
+
+            # Wait for the last stage (Blur Worker) to finish writing the images to the shared disk
+            expected_count = len(files_to_process)
+            timeout = 30  # Safety exit condition
+            check_interval = 0.1
+            elapsed = 0
+
+            while len(os.listdir(SHARED_OUTPUT_DIR)) < expected_count and elapsed < timeout:
+                time.sleep(check_interval)
+                elapsed += check_interval
+
+            # Read the files back out of the assembly line final station disk space
+            for item in files_to_process:
+                saved_path = os.path.join(SHARED_OUTPUT_DIR, item['filename'])
+                if os.path.exists(saved_path):
+                    with open(saved_path, 'rb') as sf:
+                        processed_outputs.append(sf.read())
+                else:
+                    processed_outputs.append(None)
                 
         elif mode == 'parallel':
-            # Dynamically breaks your dataset down to map across 3 CPU hardware processes
             num_cores = 3
             def chunkify(lst, n):
                 return [lst[i::n] for i in range(n)]
@@ -86,8 +119,6 @@ def process():
             
             with ProcessPoolExecutor(max_workers=num_cores) as executor:
                 futures = [executor.submit(monolith.process_batch_of_images, chunk) for chunk in file_chunks]
-                
-                # Re-assemble chunked lists back into a single flat array sequentially
                 chunk_outputs = [f.result() for f in futures]
                 processed_outputs = [None] * len(files_to_process)
                 for chunk_idx, chunk_res in enumerate(chunk_outputs):
@@ -96,7 +127,6 @@ def process():
                         if original_index < len(files_to_process):
                             processed_outputs[original_index] = out_bytes
         else:
-            # Monolithic local sequential loop
             processed_outputs = [monolith.process_image_to_bytes(f['bytes']) for f in files_to_process]
 
         # Packaging outcomes back into the Session State Memory
