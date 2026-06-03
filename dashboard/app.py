@@ -22,30 +22,43 @@ SESSION_CACHE = {
 }
 
 # The Dashboard only needs to talk directly to the entry point (Stage 1)
-BW_WORKER_ADDR = os.getenv('BW_ADDR', 'localhost:50051')
+# CRITICAL: We add 'dns:///' prefix so gRPC resolves individual pod IPs directly
+BW_WORKER_ADDR = os.getenv('BW_ADDR', 'dns:///bw-dns-service:50051')
 
 # The shared local output folder where Blur Worker drops completed images
 SHARED_OUTPUT_DIR = "/app/shared_output"
 os.makedirs(SHARED_OUTPUT_DIR, exist_ok=True)
 
-def push_to_assembly_line(filename, image_bytes):
+# -----------------------------------------------------------------------
+# NEW: SETUP GLOBAL ROUND-ROBIN CHANNEL POOL FOR DISTRIBUTED SCALE
+# -----------------------------------------------------------------------
+# This explicit config forces gRPC to rotate pods on EVERY single message payload
+GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
+
+global_channel = grpc.insecure_channel(
+    BW_WORKER_ADDR,
+    options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]
+)
+global_stub = photo_pb2_grpc.PhotoProcessorStub(global_channel)
+
+
+def push_to_assembly_line_shared(filename, image_bytes):
     """
-    Drops an image onto Stage 1 (B&W Worker) of the assembly line conveyor belt.
-    Passes the filename as metadata so subsequent services can track the image.
+    Uses the persistent global round-robin stub to distribute images
+    evenly across all available scale replicas.
     """
     try:
-        with grpc.insecure_channel(BW_WORKER_ADDR) as channel:
-            stub = photo_pb2_grpc.PhotoProcessorStub(channel)
-            # Send filename in metadata so it travels down the line
-            metadata = (('filename', filename),)
-            resp = stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=5)
-            
-            # If it safely entered the assembly line, return True
-            if resp.processed_data == b"ACK_BW":
-                return True
+        # Send filename in metadata so it travels down the line
+        metadata = (('filename', filename),)
+        # Timeout extended slightly to handle cloud network queue depths comfortably
+        resp = global_stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=10)
+        
+        if resp.processed_data == b"ACK_BW":
+            return True
     except grpc.RpcError as e:
-        print(f"Failed to drop {filename} onto assembly line: {e}")
+        print(f"Failed to split-route {filename} onto assembly line: {e}")
     return False
+
 
 @app.route('/')
 def index():
@@ -65,14 +78,12 @@ def process():
         with zipfile.ZipFile(io.BytesIO(file_content)) as incoming_zip:
             for f in incoming_zip.namelist():
                 if f.lower().endswith(('.png', '.jpg', '.jpeg')):
-                    # Keep path clean of subdirectory strings if nested in zip
                     clean_filename = os.path.basename(f)
                     if clean_filename:
                         files_to_process.append({'filename': clean_filename, 'bytes': incoming_zip.read(f)})
     else:
         files_to_process.append({'filename': uploaded_file.filename, 'bytes': file_content})
 
-    # Clean out the shared directory before starting a new distributed batch run
     if mode == 'distributed':
         for f in os.listdir(SHARED_OUTPUT_DIR):
             file_path = os.path.join(SHARED_OUTPUT_DIR, f)
@@ -85,17 +96,15 @@ def process():
     try:
         # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # 10 pipeline workers concurrently throwing images onto the belt
-            with ThreadPoolExecutor(max_workers=10) as executor:
-                futures = [executor.submit(push_to_assembly_line, f['filename'], f['bytes']) for f in files_to_process]
-                # Wait until all acknowledgements are received (everything enters the line)
+            # Bumped to 20 threads to saturate your cluster scaling endpoints simultaneously
+            with ThreadPoolExecutor(max_workers=20) as executor:
+                futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes']) for f in files_to_process]
                 results = [f.result() for f in futures]
 
             # Wait for the last stage (Blur Worker) to finish writing the images to the shared disk
             expected_count = len(files_to_process)
-            timeout = 30  # Safety exit condition
-            check_interval = 0.1
-            elapsed = 0
+            timeout = 45  # Extended for larger batches of 1,000 items
+            check_interval = 0.05  # Faster polling to minimize dashboard delay metrics
 
             while len(os.listdir(SHARED_OUTPUT_DIR)) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
