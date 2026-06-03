@@ -2,50 +2,78 @@ version: '3.8'
 
 services:
   # -----------------------------------------------------------------------
-  # 1. FRONTEND WORKLOAD: FLASK DASHBOARD INTERFACE GATEWAY
+  # 1. FRONTEND: FLASK DASHBOARD GATEWAY (Pushes to B&W, reads from Shared Volume)
   # -----------------------------------------------------------------------
   dashboard-gateway:
     build:
-      context: ./dashboard  # Relative path pointing into your dashboard folder
+      context: ./dashboard
+      args:
+        - PIP_DEFAULT_TIMEOUT=1000
+        - PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
     container_name: local-dashboard
     ports:
-      - "5000:5000"  # Exposes your Flask app to http://localhost:5000
+      - "5000:5000"
     environment:
-      # We override the localhost defaults inside app.py using Docker's internal DNS names
+      # Pushes images solely to the first station in the line
       - BW_ADDR=bw-worker-node:50051
-      - BRIGHT_ADDR=bright-worker-node:50052
-      - BLUR_ADDR=blur-worker-node:50053
+    volumes:
+      # Shares the finished images folder with the host and blur container
+      - shared-assembly-output:/app/shared_output
     depends_on:
       - bw-worker
-      - bright-worker
-      - blur-worker
 
   # -----------------------------------------------------------------------
-  # 2. BACKEND WORKLOAD: BLACK & WHITE GRPC MICROSERVICE TIER
+  # 2. STAGE 1: BLACK & WHITE GRPC WORKER (Forwards to Brightness)
   # -----------------------------------------------------------------------
   bw-worker:
     build:
       context: ./bw-service
+      args:
+        - PIP_DEFAULT_TIMEOUT=1000
+        - PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
     container_name: bw-worker-node
     ports:
       - "50051:50051"
+    environment:
+      # Informs B&W where to stream Stage 2 payloads
+      - BRIGHT_ADDR=bright-worker-node:50052
+    depends_on:
+      - bright-worker
 
   # -----------------------------------------------------------------------
-  # 3. BACKEND WORKLOAD: BRIGHTNESS BOOST GRPC MICROSERVICE TIER
+  # 3. STAGE 2: BRIGHTNESS BOOST GRPC WORKER (Forwards to Blur)
   # -----------------------------------------------------------------------
   bright-worker:
     build:
       context: ./bright-service
+      args:
+        - PIP_DEFAULT_TIMEOUT=1000
+        - PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
     container_name: bright-worker-node
     ports:
       - "50052:50052"
+    environment:
+      # Informs Brightness where to stream Stage 3 final payloads
+      - BLUR_ADDR=blur-worker-node:50053
+    depends_on:
+      - blur-worker
 
   # -----------------------------------------------------------------------
-  # 4. BACKEND WORKLOAD: GAUSSIAN BLUR GRPC MICROSERVICE TIER
+  # 4. STAGE 3: GAUSSIAN BLUR GRPC WORKER (Writes output to Shared Volume)
   # -----------------------------------------------------------------------
   blur-worker:
     build:
       context: ./blur-service
+      args:
+        - PIP_DEFAULT_TIMEOUT=1000
+        - PIP_INDEX_URL=https://pypi.tuna.tsinghua.edu.cn/simple
     container_name: blur-worker-node
     ports:
       - "50053:50053"
+    volumes:
+      # Writes final processed image files here for the dashboard to read
+      - shared-assembly-output:/app/shared_output
+
+# Declare the named volume instance to bridge the storage space between containers
+volumes:
+  shared-assembly-output:
