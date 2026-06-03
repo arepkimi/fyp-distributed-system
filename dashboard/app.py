@@ -26,37 +26,30 @@ DISTRIBUTED_MEMORY_CACHE = {}
 
 # The Dashboard only needs to talk directly to the entry point (Stage 1)
 BW_WORKER_ADDR = os.getenv('BW_ADDR', 'dns:///bw-dns-service:50051')
-
-# -----------------------------------------------------------------------
-# SETUP GLOBAL ROUND-ROBIN CHANNEL POOL FOR DISTRIBUTED SCALE
-# -----------------------------------------------------------------------
 GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
-
-global_channel = grpc.insecure_channel(
-    BW_WORKER_ADDR,
-    options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]
-)
-global_stub = photo_pb2_grpc.PhotoProcessorStub(global_channel)
 
 
 def push_to_assembly_line_shared(filename, image_bytes):
     """
-    Uses the persistent global round-robin stub to distribute images
-    evenly across all available scale replicas.
+    FIXED: Establishes an independent, thread-safe gRPC network context.
+    This guarantees that concurrent threads resolve through the load balancer's
+    round-robin channel definitions independently instead of sticking to a single socket pointer.
     """
     try:
-        metadata = (('filename', filename),)
-        resp = global_stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=10)
-        
-        if resp.processed_data == b"ACK_BW":
-            return True
+        with grpc.insecure_channel(BW_WORKER_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as channel:
+            local_stub = photo_pb2_grpc.PhotoProcessorStub(channel)
+            metadata = (('filename', filename),)
+            resp = local_stub.Process(photo_pb2.PhotoRequest(image_data=image_bytes), metadata=metadata, timeout=10)
+            
+            if resp.processed_data == b"ACK_BW":
+                return True
     except grpc.RpcError as e:
         print(f"Failed to split-route {filename} onto assembly line: {e}")
     return False
 
 
 # -----------------------------------------------------------------------
-# LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
+# NEW: LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
 # -----------------------------------------------------------------------
 @app.route('/receiver', methods=['POST'])
 def receive_completed_image():
@@ -103,9 +96,8 @@ def process():
     try:
         # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # --- FIXED: SWAPPED TO PROCESS POOL TO SHATTER THE GIL BOTTLENECK ---
-            # Using 3 multi-core worker processes feeds your scaled gRPC pipeline instantly
-            with ProcessPoolExecutor(max_workers=3) as executor:
+            # Fire data pipeline downstream to Stage 1
+            with ThreadPoolExecutor(max_workers=20) as executor:
                 futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes']) for f in files_to_process]
                 results = [f.result() for f in futures]
 
@@ -116,7 +108,7 @@ def process():
             elapsed = 0
             start_poll = time.time()
 
-            # --- POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
+            # --- FIXED: POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
             while len(DISTRIBUTED_MEMORY_CACHE) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
                 elapsed = time.time() - start_poll
