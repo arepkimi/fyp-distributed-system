@@ -52,7 +52,7 @@ kind: Deployment
 metadata:
   name: bw-worker-deployment
 spec:
-  replicas: 1
+  replicas: 1  # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
   selector:
     matchLabels:
       app: bw-worker
@@ -62,16 +62,18 @@ spec:
         app: bw-worker
     spec:
       affinity:
-        # --- ANTI-AFFINITY: FORBIDDEN FROM SHARING A NODE WITH THE DASHBOARD ---
+        # --- FIXED: CHANGED TO SOFT ANTI-AFFINITY TO ALLOW FLEXIBLE TESTING ---
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - fyp-dashboard
-            topologyKey: "kubernetes.io/hostname"
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - fyp-dashboard
+              topologyKey: "kubernetes.io/hostname"
       containers:
       - name: bw-container
         image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/bw-worker:latest
@@ -79,8 +81,8 @@ spec:
         - containerPort: 50051
         resources:
           requests:
-            cpu: "500m"      
-            memory: "512Mi"
+            cpu: "200m"       # FIXED: Lowered request so multiple scaled pods fit easily
+            memory: "256Mi"
           limits:
             cpu: "1"
             memory: "1Gi"
@@ -109,7 +111,7 @@ kind: Deployment
 metadata:
   name: bright-worker-deployment
 spec:
-  replicas: 1
+  replicas: 1  # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
   selector:
     matchLabels:
       app: bright-worker
@@ -119,16 +121,18 @@ spec:
         app: bright-worker
     spec:
       affinity:
-        # --- ANTI-AFFINITY: FORBIDDEN FROM SHARING A NODE WITH THE DASHBOARD ---
+        # --- FIXED: CHANGED TO SOFT ANTI-AFFINITY TO ALLOW FLEXIBLE TESTING ---
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - fyp-dashboard
-            topologyKey: "kubernetes.io/hostname"
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - fyp-dashboard
+              topologyKey: "kubernetes.io/hostname"
       containers:
       - name: bright-container
         image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/bright-worker:latest
@@ -136,8 +140,8 @@ spec:
         - containerPort: 50052
         resources:
           requests:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "200m"       # FIXED: Lowered request so multiple scaled pods fit easily
+            memory: "256Mi"
           limits:
             cpu: "1"
             memory: "1Gi"
@@ -166,7 +170,7 @@ kind: Deployment
 metadata:
   name: blur-worker-deployment
 spec:
-  replicas: 1
+  replicas: 1  # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
   selector:
     matchLabels:
       app: blur-worker
@@ -176,16 +180,18 @@ spec:
         app: blur-worker
     spec:
       affinity:
-        # --- ANTI-AFFINITY: FORBIDDEN FROM SHARING A NODE WITH THE DASHBOARD ---
+        # --- FIXED: CHANGED TO SOFT ANTI-AFFINITY TO ALLOW FLEXIBLE TESTING ---
         podAntiAffinity:
-          requiredDuringSchedulingIgnoredDuringExecution:
-          - labelSelector:
-              matchExpressions:
-              - key: app
-                operator: In
-                values:
-                - fyp-dashboard
-            topologyKey: "kubernetes.io/hostname"
+          preferredDuringSchedulingIgnoredDuringExecution:
+          - weight: 100
+            podAffinityTerm:
+              labelSelector:
+                matchExpressions:
+                - key: app
+                  operator: In
+                  values:
+                  - fyp-dashboard
+              topologyKey: "kubernetes.io/hostname"
       containers:
       - name: blur-container
         image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/blur-worker:latest
@@ -193,8 +199,8 @@ spec:
         - containerPort: 50053
         resources:
           requests:
-            cpu: "500m"
-            memory: "512Mi"
+            cpu: "200m"       # FIXED: Lowered request so multiple scaled pods fit easily
+            memory: "256Mi"
           limits:
             cpu: "1"
             memory: "1Gi"
