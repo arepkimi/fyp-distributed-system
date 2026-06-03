@@ -10,6 +10,7 @@ import photo_pb2_grpc
 OUTPUT_DIR = "/app/shared_output"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
+
 class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
     def Process(self, request, context):
         # Read the unique tracking ID from gRPC Metadata headers
@@ -39,13 +40,16 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
         # Return a fast acknowledgment back to the previous worker
         return photo_pb2.PhotoResponse(processed_data=b"ACK_BLUR")
 
+
 def serve():
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=10))
+    # Bumped max_workers pool to 20 threads to cleanly execute multiple parallel file writes simultaneously
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=20))
     photo_pb2_grpc.add_PhotoProcessorServicer_to_server(PhotoProcessor(), server)
     server.add_insecure_port('[::]:50053')
     server.start()
     server.wait_for_termination()
 
+
 if __name__ == '__main__':
-    print("Blur Worker (Assembly Final Station) is running on Port 50053...")
+    print("Blur Worker (Assembly Final Station) is running on Port 50053, receiving distributed load...")
     serve()
