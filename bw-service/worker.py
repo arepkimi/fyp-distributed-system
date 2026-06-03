@@ -8,18 +8,7 @@ import photo_pb2_grpc
 
 # Prepend 'dns:///' prefix so gRPC pulls individual pod IPs from K8s DNS
 NEXT_STAGE_ADDR = os.getenv('BRIGHT_ADDR', 'dns:///bright-dns-service:50052')
-
-# -----------------------------------------------------------------------
-# GLOBAL ROUND-ROBIN CONNECTION POOLING FOR DOWNSTREAM SCALE
-# -----------------------------------------------------------------------
-# This explicit config forces gRPC to rotate pods on EVERY single image payload sent to Stage 2
 GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
-
-global_channel = grpc.insecure_channel(
-    NEXT_STAGE_ADDR,
-    options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]
-)
-global_stub = photo_pb2_grpc.PhotoProcessorStub(global_channel)
 
 
 class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
@@ -41,14 +30,18 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
         _, buffer = cv2.imencode('.jpg', result)
         bw_bytes = buffer.tobytes()
 
-        # 2. HANDOFF: Uses persistent global round-robin stub to distribute work down the chain
+        # 2. FIXED HANDOFF: Opens an isolated context-managed channel per request.
+        # This breaks connection stickiness and forces gRPC to distribute tasks to different Stage 2 replicas.
         try:
-            # Pass the image data and forward the tracking metadata headers downstream
-            global_stub.Process(
-                photo_pb2.PhotoRequest(image_data=bw_bytes),
-                metadata=metadata,
-                timeout=10  
-            )
+            with grpc.insecure_channel(NEXT_STAGE_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as channel:
+                local_stub = photo_pb2_grpc.PhotoProcessorStub(channel)
+                
+                # Pass the image data and forward the tracking metadata headers downstream
+                local_stub.Process(
+                    photo_pb2.PhotoRequest(image_data=bw_bytes),
+                    metadata=metadata,
+                    timeout=10  
+                )
         except grpc.RpcError as e:
             print(f"Assembly line load-split handoff failed from B&W to Brighten: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
