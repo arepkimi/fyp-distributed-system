@@ -105,10 +105,14 @@ def process():
             expected_count = len(files_to_process)
             timeout = 45  # Extended for larger batches of 1,000 items
             check_interval = 0.05  # Faster polling to minimize dashboard delay metrics
+            
+            # --- FIXED: INITIALIZE ELAPSED AND TRACK TIMES CORRECTLY ---
+            elapsed = 0
+            start_poll = time.time()
 
             while len(os.listdir(SHARED_OUTPUT_DIR)) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
-                elapsed += check_interval
+                elapsed = time.time() - start_poll
 
             # Read the files back out of the assembly line final station disk space
             for item in files_to_process:
