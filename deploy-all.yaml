@@ -7,7 +7,7 @@ metadata:
   name: assembly-shared-pvc
 spec:
   accessModes:
-    - ReadWriteMany  # Allows dashboard and blur pods to read/write simultaneously
+    - ReadWriteOnce  # GKE Autopilot native storage handles this instantly
   resources:
     requests:
       storage: 2Gi   # Provides plenty of space for image processing batches
@@ -31,7 +31,7 @@ spec:
     spec:
       containers:
       - name: gateway-container
-        image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/dashboard-gateway:latest
+        image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/dashboard-gateway:latest
         ports:
         - containerPort: 5000
         resources:
@@ -106,7 +106,7 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       containers:
       - name: bw-container
-        image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/bw-worker:latest
+        image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/bw-worker:latest
         ports:
         - containerPort: 50051
         resources:
@@ -169,7 +169,7 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       containers:
       - name: bright-container
-        image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/bright-worker:latest
+        image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/bright-worker:latest
         ports:
         - containerPort: 50052
         resources:
@@ -232,7 +232,7 @@ spec:
               topologyKey: "kubernetes.io/hostname"
       containers:
       - name: blur-container
-        image: asia-southeast1-docker.pkg.dev/YOUR_GCP_PROJECT_ID/fyp-images/blur-worker:latest
+        image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/blur-worker:latest
         ports:
         - containerPort: 50053
         resources:
