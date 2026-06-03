@@ -7,12 +7,12 @@ import photo_pb2
 import photo_pb2_grpc
 
 # CRITICAL: Prepend 'dns:///' prefix so gRPC pulls individual pod IPs from K8s DNS
-NEXT_STAGE_ADDR = os.getenv('BRIGHT_ADDR', 'dns:///bright-dns-service:50052')
+NEXT_STAGE_ADDR = os.getenv('BLUR_ADDR', 'dns:///blur-dns-service:50053')
 
 # -----------------------------------------------------------------------
-# NEW: GLOBAL ROUND-ROBIN CONNECTION POOLING FOR DOWNSTREAM SCALE
+# GLOBAL ROUND-ROBIN CONNECTION POOLING FOR STAGE 3 DISTRIBUTED SCALE
 # -----------------------------------------------------------------------
-# This explicit config forces gRPC to rotate pods on EVERY single image payload sent to Stage 2
+# This explicit config forces gRPC to rotate pods on EVERY single image payload sent to Stage 3
 GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
 
 global_channel = grpc.insecure_channel(
@@ -35,37 +35,39 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
             context.set_details("Corrupt image bytes.")
             return photo_pb2.PhotoResponse()
 
-        # --- True Black & White Transformation ---
-        result = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        # --- True Brightness Boost Transformation ---
+        # Scale brightness by multiplying pixel values safely
+        result = cv2.convertScaleAbs(img, alpha=1.2, beta=30)
         
         _, buffer = cv2.imencode('.jpg', result)
-        bw_bytes = buffer.tobytes()
+        bright_bytes = buffer.tobytes()
 
-        # 2. FIXED HANDOFF: Uses persistent global round-robin stub to distribute work
+        # 2. FIXED HANDOFF: Uses persistent global round-robin stub to distribute work to Blur Worker
         try:
             # Pass the image data and forward the tracking metadata headers downstream
             global_stub.Process(
-                photo_pb2.PhotoRequest(image_data=bw_bytes),
+                photo_pb2.PhotoRequest(image_data=bright_bytes),
                 metadata=metadata,
                 timeout=10  # Relaxed slightly to account for high-concurrency pipeline queues safely
             )
         except grpc.RpcError as e:
-            print(f"Assembly line load-split handoff failed from B&W to Brighten: {e}")
+            print(f"Assembly line load-split handoff failed from Brighten to Blur: {e}")
             context.set_code(grpc.StatusCode.INTERNAL)
             return photo_pb2.PhotoResponse()
 
-        # 3. Return immediate acknowledgment back to the dashboard gateway
-        return photo_pb2.PhotoResponse(processed_data=b"ACK_BW")
+        # 3. Return immediate acknowledgment back to the B&W Worker upstream
+        return photo_pb2.PhotoResponse(processed_data=b"ACK_BRIGHT")
 
 
 def serve():
     # Bumped max_workers pool to 20 threads to handle concurrent round-robin incoming feeds
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=20))
     photo_pb2_grpc.add_PhotoProcessorServicer_to_server(PhotoProcessor(), server)
-    server.add_insecure_port('[::]:50051')
+    server.add_insecure_port('[::]:50052')
     server.start()
     server.wait_for_termination()
 
+
 if __name__ == '__main__':
-    print(f"B&W Worker (Assembly Stage 1) is running on Port 50051, load-balancing to {NEXT_STAGE_ADDR}...")
+    print(f"Brightness Worker (Assembly Stage 2) is running on Port 50052, receiving distributed load...")
     serve()
