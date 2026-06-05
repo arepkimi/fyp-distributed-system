@@ -22,7 +22,7 @@ spec:
         - containerPort: 5000
         resources:
           requests:
-            cpu: "500m"         # Low entry request allows immediate node scheduling
+            cpu: "2"         # Low entry request allows immediate node scheduling
             memory: "1Gi"       
           limits:
             cpu: "6"            # Burst ceiling intact for local parallel benchmarks!
