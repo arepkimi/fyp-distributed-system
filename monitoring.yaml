@@ -1,125 +1,24 @@
-# 1. PERMISSIONS: Allow Prometheus to scan GKE Autopilot pods for hardware usage
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: prometheus-sa
-  namespace: default
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: prometheus-cluster-role
-rules:
-- apiGroups: [""]
-  resources: ["nodes", "nodes/proxy", "services", "endpoints", "pods"]
-  verbs: ["get", "list", "watch"]
-- nonResourceURLs: ["/metrics"]
-  verbs: ["get"]
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: prometheus-role-binding
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: prometheus-cluster-role
-subjects:
-- kind: ServiceAccount
-  name: prometheus-sa
-  namespace: default
-
----
-# 2. PROMETHEUS CONFIGURATION: Tell Prometheus to scrape every 5 seconds
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: prometheus-server-conf
-  namespace: default
-data:
-  prometheus.yml: |
-    global:
-      scrape_interval: 5s
-      evaluation_interval: 5s
-
-    scrape_configs:
-      - job_name: 'kubernetes-pods'
-        kubernetes_sd_configs:
-          - role: pod
-        relabel_configs:
-          - action: labelmap
-            regex: __meta_kubernetes_pod_label_(.+)
-
----
-# 3. PROMETHEUS ENGINE: Run the metric collection database
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: prometheus-deployment
-  namespace: default
+  name: grafana-monitoring
+  namespace: kube-system
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: prometheus-server
+      app: grafana-monitoring
   template:
     metadata:
       labels:
-        app: prometheus-server
+        app: grafana-monitoring
     spec:
-      serviceAccountName: prometheus-sa
       containers:
-      - name: prometheus
-        image: prom/prometheus:v2.45.0
-        args:
-          - "--config.file=/etc/prometheus/prometheus.yml"
-          - "--storage.tsdb.path=/prometheus/"
+      - name: grafana
+        image: grafana/grafana:latest
         ports:
-        - containerPort: 9090
+        - containerPort: 3000
         resources:
-          requests:
-            cpu: "250m"
-            memory: "512Mi"
           limits:
             cpu: "500m"
-            memory: "1Gi"
-        volumeMounts:
-        - name: config-volume
-          mountPath: /etc/prometheus/
-        - name: storage-volume
-          mountPath: /prometheus/
-      volumes:
-      - name: config-volume
-        configMap:
-          name: prometheus-server-conf
-      - name: storage-volume
-        emptyDir: {}
----
-apiVersion: v1
-kind: Service
-metadata:
-  name: prometheus-service
-  namespace: default
-spec:
-  selector:
-    app: prometheus-server
-  ports:
-    - port: 9090
-      targetPort: 9090
-
----
-# 4. GRAFANA DATASOURCE LINK: Force Grafana to see Prometheus automatically
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: grafana-datasources
-  namespace: default
-data:
-  prometheus.yaml: |
-    apiVersion: 1
-    datasources:
-    - name: Prometheus
-      type: prometheus
-      access: proxy
-      url: http://prometheus-service:9090
-      isDefault: true
+            memory: "512Mi"
