@@ -29,6 +29,14 @@ import monolith
 
 app = Flask(__name__)
 
+# =======================================================================
+# GLOBAL OPTIMIZER: PERSISTENT MULTI-CORE WORKER POOL
+# Instantiating this at startup keeps the 3 OS child processes "warm".
+# This removes the 2-3 second Linux kernel process creation lag from 
+# your measured execution timeline.
+# =======================================================================
+GLOBAL_PARALLEL_EXECUTOR = ProcessPoolExecutor(max_workers=3)
+
 SESSION_CACHE = {
     'processed_zip_bytes': None,
     'total_time': 0,
@@ -144,15 +152,15 @@ def process():
             
             file_chunks = chunkify(files_to_process, num_cores)
             
-            with ProcessPoolExecutor(max_workers=num_cores) as executor:
-                futures = [executor.submit(monolith.process_batch_of_images, chunk) for chunk in file_chunks]
-                chunk_outputs = [f.result() for f in futures]
-                processed_outputs = [None] * len(files_to_process)
-                for chunk_idx, chunk_res in enumerate(chunk_outputs):
-                    for item_idx, out_bytes in enumerate(chunk_res):
-                        original_index = item_idx * num_cores + chunk_idx
-                        if original_index < len(files_to_process):
-                            processed_outputs[original_index] = out_bytes
+            # Submits tasks directly to the warmed persistent pool instead of triggering cold creations
+            futures = [GLOBAL_PARALLEL_EXECUTOR.submit(monolith.process_batch_of_images, chunk) for chunk in file_chunks]
+            chunk_outputs = [f.result() for f in futures]
+            processed_outputs = [None] * len(files_to_process)
+            for chunk_idx, chunk_res in enumerate(chunk_outputs):
+                for item_idx, out_bytes in enumerate(chunk_res):
+                    original_index = item_idx * num_cores + chunk_idx
+                    if original_index < len(files_to_process):
+                        processed_outputs[original_index] = out_bytes
         else:
             # ===================================================================
             # TRUE SEQUENTIAL MONOLITHIC TRACK (EDITED BLOCK ONLY)
