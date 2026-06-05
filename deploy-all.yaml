@@ -25,7 +25,7 @@ spec:
             cpu: "500m"         # Low entry request allows immediate node scheduling
             memory: "1Gi"       
           limits:
-            cpu: "3"            # Burst ceiling intact for local parallel benchmarks!
+            cpu: "6"            # Burst ceiling intact for local parallel benchmarks!
             memory: "3Gi"       
         env:
         - name: BW_ADDR
