@@ -120,8 +120,11 @@ def process():
             with grpc.insecure_channel(BW_WORKER_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as batch_channel:
                 batch_stub = photo_pb2_grpc.PhotoProcessorStub(batch_channel)
                 
-                # Share the active batch_stub across your 20 threads to eliminate handshake latency stalls
-                with ThreadPoolExecutor(max_workers=20) as executor:
+                # =========================================================================
+                # OPTIMIZED BACKPRESSURE CONTROLLER: CONCURRENCY CONSTRAINED TO 3 WORKERS
+                # Throttles transmission velocity to prevent high-res gRPC channel drops.
+                # =========================================================================
+                with ThreadPoolExecutor(max_workers=3) as executor:
                     futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes'], batch_stub) for f in files_to_process]
                     results = [f.result() for f in futures]
 
