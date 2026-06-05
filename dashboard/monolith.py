@@ -16,7 +16,18 @@ def process_image_to_bytes(image_bytes):
     # 2. Execute Image Standardization Chain (Your exact variables)
     img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     img = cv2.convertScaleAbs(img, alpha=1.0, beta=50) # Brightness Beta 50
-    img = cv2.GaussianBlur(img, (15, 15), 0)           # Blur Kernel 15x15
+    
+    # =========================================================================
+    # DYNAMIC KERNEL CALCULATION (THE MATHEMATICAL SCALE FACTOR)
+    # Automatically scales the workload to match the resolution of your image.
+    # For a standard high-res image (~4000px), this dynamically targets a ~101x101 matrix.
+    # =========================================================================
+    height, width = img.shape[:2]
+    kernel_size = int(max(height, width) * 0.025)
+    if kernel_size % 2 == 0:  # OpenCV strictly requires Gaussian kernels to be odd numbers
+        kernel_size += 1
+        
+    img = cv2.GaussianBlur(img, (kernel_size, kernel_size), 0) 
 
     # 3. Re-encode the matrix back into a raw JPG binary byte stream
     _, buffer = cv2.imencode('.jpg', img)
