@@ -9,6 +9,21 @@ import photo_pb2
 import photo_pb2_grpc
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
+# =======================================================================
+# SAFE THREAD CONSTRICTION FOR TRUE MONOLITHIC SEQUENTIAL BENCHMARKING
+# These environment variables must be declared BEFORE importing cv2/numpy
+# to restrict their internal multi-threading engines to 1 single thread.
+# =======================================================================
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+import cv2
+# Force OpenCV's internal hardware-accelerated thread pool to use exactly 1 thread
+cv2.setNumThreads(0) 
+
 # IMPORT YOUR SEPARATE CORE ENGINE MODULE HERE
 import monolith 
 
@@ -139,7 +154,13 @@ def process():
                         if original_index < len(files_to_process):
                             processed_outputs[original_index] = out_bytes
         else:
-            processed_outputs = [monolith.process_image_to_bytes(f['bytes']) for f in files_to_process]
+            # ===================================================================
+            # TRUE SEQUENTIAL MONOLITHIC EXECUTION
+            # Process images one by one sequentially down a single timeline lane.
+            # ===================================================================
+            for f in files_to_process:
+                out_bytes = monolith.process_image_to_bytes(f['bytes'])
+                processed_outputs.append(out_bytes)
 
         # Packaging outcomes back into the Session State Memory
         zip_buffer = io.BytesIO()
