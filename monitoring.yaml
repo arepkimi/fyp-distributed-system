@@ -18,6 +18,15 @@ spec:
         image: grafana/grafana:latest
         ports:
         - containerPort: 3000
+        env:
+        - name: GF_SECURITY_ALLOW_EMBEDDING
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ENABLED
+          value: "true"
+        - name: GF_AUTH_ANONYMOUS_ORG_ROLE
+          value: "Viewer"
+        - name: GF_PANELS_DISABLE_SANITIZE_HTML
+          value: "true"
         securityContext:
           runAsUser: 472
         resources:
@@ -31,11 +40,11 @@ metadata:
   name: fyp-grafana-service
   namespace: default
 spec:
-  type: ClusterIP
+  type: LoadBalancer        # Instructs Google Cloud to assign a public IP endpoint
   selector:
     app: fyp-grafana
   ports:
-  - port: 3000
+  - port: 80
     targetPort: 3000
 ---
 apiVersion: apps/v1
@@ -58,7 +67,7 @@ spec:
       - name: frontend
         image: gke.gcr.io/prometheus-engine/frontend:v0.8.2
         args:
-        - "--query.project-id=fyp-distributed-system-155462"
+        - "--query.project-id=fyp-distributed-system-155462" # Bound directly to your cloud project ID
         ports:
         - name: web
           containerPort: 9090
@@ -73,7 +82,7 @@ metadata:
   name: prometheus-frontend-service
   namespace: default
 spec:
-  type: ClusterIP
+  type: ClusterIP          # Securely kept internal to avoid exposing raw data maps to the internet
   selector:
     app: prometheus-frontend
   ports:
