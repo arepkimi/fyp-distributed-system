@@ -1,24 +1,81 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: grafana-monitoring
-  namespace: kube-system
+  name: fyp-grafana-deployment
+  namespace: default
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: grafana-monitoring
+      app: fyp-grafana
   template:
     metadata:
       labels:
-        app: grafana-monitoring
+        app: fyp-grafana
     spec:
       containers:
       - name: grafana
         image: grafana/grafana:latest
         ports:
         - containerPort: 3000
+        securityContext:
+          runAsUser: 472
         resources:
           limits:
             cpu: "500m"
             memory: "512Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fyp-grafana-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: fyp-grafana
+  ports:
+  - port: 3000
+    targetPort: 3000
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-frontend
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-frontend
+  template:
+    metadata:
+      labels:
+        app: prometheus-frontend
+    spec:
+      automountServiceAccountToken: true
+      containers:
+      - name: frontend
+        image: gke.gcr.io/prometheus-engine/frontend:v0.8.2
+        args:
+        - "--query.project-id=fyp-distributed-system-155462"
+        ports:
+        - name: web
+          containerPort: 9090
+        resources:
+          limits:
+            cpu: "200m"
+            memory: "256Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-frontend-service
+  namespace: default
+spec:
+  type: ClusterIP
+  selector:
+    app: prometheus-frontend
+  ports:
+  - port: 9090
+    targetPort: 9090
