@@ -23,8 +23,9 @@ spec:
           value: "true"
         - name: GF_AUTH_ANONYMOUS_ENABLED
           value: "true"
+        # Admin privileges enabled for smooth iframe presentations with zero log-ins
         - name: GF_AUTH_ANONYMOUS_ORG_ROLE
-          value: "Viewer"
+          value: "Admin"
         - name: GF_PANELS_DISABLE_SANITIZE_HTML
           value: "true"
         securityContext:
@@ -65,9 +66,10 @@ spec:
       automountServiceAccountToken: true
       containers:
       - name: frontend
-        image: gke.gcr.io/prometheus-engine/frontend:v0.8.2
+        # FIX: Switched to Google's standardized upstream production location 
+        image: gcr.io/gke-release/prometheus-engine/frontend:v0.12.0-gke.1
         args:
-        - "--query.project-id=fyp-distributed-system-155462" # Bound directly to your cloud project ID
+        - "--query.project-id=fyp-distributed-system-155462"
         ports:
         - name: web
           containerPort: 9090
