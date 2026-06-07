@@ -30,6 +30,11 @@ spec:
         env:
         - name: BW_ADDR
           value: "dns:///bw-dns-service:50051"
+        # 👇 ONLY ADD THESE TWO NEW LINES RIGHT HERE
+        - name: GRAFANA_EXTERNAL_IP
+          value: "34.126.99.181"
+        - name: GRAFANA_DASHBOARD_UID
+          value: "g24dbj"
 ---
 apiVersion: v1
 kind: Service
