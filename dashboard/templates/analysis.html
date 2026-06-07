@@ -9,63 +9,18 @@
         /* Master Container expanded to fit dashboard panels smoothly */
         .container { background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); max-width: 1200px; margin: 0 auto; }
         
-        /* Master Layout split: Left Panel (Telemetry) & Right Panel (Original Core Data) */
-        .dashboard-layout { display: flex; gap: 30px; margin-top: 25px; align-items: stretch; }
+        /* Unified Top Row layout spanning 100% full width */
+        .dashboard-layout { margin-top: 25px; margin-bottom: 30px; }
         
-        /* Left Column taking exactly 50% width */
-        .left-telemetry-column { flex: 1; display: flex; flex-direction: column; gap: 25px; }
+        /* Full Width Chart Panel styling */
+        .chart-card { background: #161b22; border-radius: 8px; padding: 20px; border: 1px solid #30363d; box-sizing: border-box; }
+        .chart-title { color: #f8fafc; font-weight: bold; margin-bottom: 15px; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }
         
-        /* Right Column taking exactly 50% width */
-        .right-data-column { flex: 1; display: flex; flex-direction: column; }
-        
-        /* Tables layout styling */
-        table { width: 100%; border-collapse: collapse; margin-top: 5px; }
+        /* Data section positioning directly under chart */
+        .bottom-data-section { margin-top: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 5px; background: #ffffff; }
         th, td { padding: 15px 12px; text-align: left; border-bottom: 1px solid #dee2e6; }
         th { background-color: #f1f3f5; font-weight: bold; color: #495057; }
-        
-        /* Top Left Panel: Average CPU Custom Card matched to user image design */
-        .cpu-average-card { 
-            background: #ffffff; 
-            border: 1px solid #e2e8f0; 
-            border-radius: 8px; 
-            padding: 20px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: space-between;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-        .cpu-card-info h4 { margin: 0; color: #64748b; text-transform: uppercase; font-size: 0.85em; letter-spacing: 0.5px; }
-        .cpu-card-info h2 { margin: 8px 0 0 0; color: #0f172a; font-size: 2.2em; font-weight: 700; }
-        
-        /* Circular Percentage Indicator matched to image styling */
-        .cpu-circle-gauge {
-            width: 80px;
-            height: 80px;
-            border-radius: 50%;
-            background: conic-gradient(#0d6efd calc({{ cpu_usage if cpu_usage else 45 }} * 1%), #e2e8f0 0);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: relative;
-        }
-        .cpu-circle-gauge::before {
-            content: "";
-            position: absolute;
-            width: 64px;
-            height: 64px;
-            border-radius: 50%;
-            background: white;
-        }
-        .cpu-circle-value {
-            position: relative;
-            font-weight: 700;
-            color: #0d6efd;
-            font-size: 1.15em;
-        }
-
-        /* Bottom Left Panel: Timeline Spike Chart Wrapper */
-        .chart-card { background: #161b22; border-radius: 8px; padding: 20px; border: 1px solid #30363d; }
-        .chart-title { color: #f8fafc; font-weight: bold; margin-bottom: 15px; font-size: 0.85em; text-transform: uppercase; letter-spacing: 0.5px; }
         
         .btn { display: inline-block; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; }
         .btn-success { background: #28a745; color: white; font-size: 1.1em; }
@@ -79,64 +34,39 @@
     <p style="color: #64748b; margin-top: -5px;">Comparative telemetry data generated during cluster workload execution.</p>
 
     <div class="dashboard-layout">
-        
-        <div class="left-telemetry-column">
-            {% if metrics.mode == 'distributed' %}
-                
-                <div class="cpu-average-card">
-                    <div class="cpu-card-info">
-                        <h4>Average CPU Core Cost</h4>
-                        <h2>{{ cpu_usage if cpu_usage else "45.2" }}%</h2>
-                    </div>
-                    <div class="cpu-circle-gauge">
-                        <div class="cpu-circle-value">{{ cpu_usage if cpu_usage else "45" }}%</div>
-                    </div>
-                </div>
-
-                <div class="chart-card">
-                    <div class="chart-title">🖥️ Compute Load Timeline Spikes (Per Service Pod Layer)</div>
-                    <iframe src="http://localhost:3000/d-solo/your-dashboard-uid?orgId=1&panelId=1&theme=dark" width="100%" height="240" frameborder="0"></iframe>
-                </div>
-
-            {% else %}
-                <div class="chart-card" style="background: #f8fafc; border: 2px dashed #cbd5e1; display: flex; align-items: center; justify-content: center; height: 100%;">
-                    <p style="color: #64748b; font-weight: 500; text-align: center; margin: 40px 20px; line-height: 1.5;">
-                        Cloud Telemetry Inactive.<br>
-                        <span style="font-size: 0.85em; font-weight: normal; color: #94a3b8;">Grafana & Prometheus tracking activate exclusively during Distributed cluster loops.</span>
-                    </p>
-                </div>
-            {% endif %}
+        <div class="chart-card">
+            <div class="chart-title">🖥️ Compute Load Timeline Spikes (Infrastructure Processing Layer)</div>
+            <iframe src="http://34.124.247.96/d-solo/g22lv7/test?orgId=1&from=now-5m&to=now&timezone=browser&panelId=panel-1&refresh=1s&theme=dark" width="100%" height="350" frameborder="0"></iframe>
         </div>
-        
-        <div class="right-data-column">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="border-radius: 4px 0 0 0;">Performance Indicator Metric</th>
-                        <th style="border-radius: 0 4px 0 0;">Observed System Value Output</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
+    </div>
 
-                        <td><strong style="color: #007bff;">{{ metrics.mode.upper() }}</strong></td>
-                    </tr>
-                    <tr>
-                        <td>Total Workload</td>
-                        <td>{{ metrics.count }} Images</td>
-                    </tr>
-                    <tr>
-                        <td>Total Latency </td>
-                        <td>{{ total_time }} seconds</td>
-                    </tr>
-                    <tr>
-                        <td>System Compute Throughput </td>
-                        <td><strong>{{ metrics.throughput }} Images / Second</strong></td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        
+    <div class="bottom-data-section">
+        <table>
+            <thead>
+                <tr>
+                    <th style="border-radius: 4px 0 0 0; width: 50%;">Performance Indicator Metric</th>
+                    <th style="border-radius: 0 4px 0 0; width: 50%;">Observed System Value Output</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Execution Architecture Mode</td>
+                    <td><strong style="color: #007bff;">{{ metrics.mode.upper() }}</strong></td>
+                </tr>
+                <tr>
+                    <td>Total Workload</td>
+                    <td>{{ metrics.count }} Images</td>
+                </tr>
+                <tr>
+                    <td>Total Latency</td>
+                    <td>{{ total_time }} seconds</td>
+                </tr>
+                <tr>
+                    <td>Architecture Throughput</td>
+                    <td><strong>{{ metrics.throughput }} Images / Second</strong></td>
+                </tr>
+            </tbody>
+        </table>
     </div>
 
     <div class="action-panel" style="margin-top: 35px; border-top: 1px solid #dee2e6; padding-top: 20px;">
