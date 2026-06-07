@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Empirical Performance Telemetry</title>
+    <title> Performance Telemetry</title>
     <style>
         body { font-family: sans-serif; margin: 40px; background: #f4f6f9; color: #333; }
         
@@ -30,13 +30,13 @@
 <body>
 
 <div class="container">
-    <h2>📊 Architecture Empirical Performance Analysis</h2>
+    <h2>📊 Architecture Performance Analysis</h2>
     <p style="color: #64748b; margin-top: -5px;">Comparative telemetry data generated during cluster workload execution.</p>
 
     <div class="dashboard-layout">
         <div class="chart-card">
-            <div class="chart-title">🖥️ Compute Load Timeline Spikes (Infrastructure Processing Layer)</div>
-            <iframe src="http://34.124.247.96/d-solo/g22lv7/test?orgId=1&from=now-5m&to=now&timezone=browser&theme=dark&panelId=panel-1&refresh=1s></iframe>
+            <div class="chart-title">🖥️ CPU Spikes Timeline</div>
+            <iframe src="http://34.124.247.96/d-solo/grx646/real-percentage-copy?orgId=1&from=now-5m&to=now&timezone=browser&theme=dark&panelId=panel-1&refresh=1s" width="100%" height="350" frameborder="0"></iframe>
         </div>
     </div>
 
@@ -44,13 +44,13 @@
         <table>
             <thead>
                 <tr>
-                    <th style="border-radius: 4px 0 0 0; width: 50%;">Performance Indicator Metric</th>
+                    <th style="border-radius: 4px 0 0 0; width: 50%;">Performance Metric</th>
                     <th style="border-radius: 0 4px 0 0; width: 50%;">Observed System Value Output</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
-                    <td>Execution Architecture Mode</td>
+                    <td> Architecture Mode</td>
                     <td><strong style="color: #007bff;">{{ metrics.mode.upper() }}</strong></td>
                 </tr>
                 <tr>
