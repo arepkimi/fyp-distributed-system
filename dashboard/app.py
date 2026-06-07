@@ -220,7 +220,16 @@ def update_metrics():
 
 @app.route('/analysis')
 def analysis():
-    return render_template('analysis.html', metrics=SESSION_CACHE['metrics'], total_time=SESSION_CACHE['total_time'])
+    # Fetch values dynamically populated inside your deployment YAML environments layer
+    grafana_ip = os.environ.get('GRAFANA_EXTERNAL_IP', '34.126.99.181')
+    dashboard_uid = os.environ.get('GRAFANA_DASHBOARD_UID', 'g24dbj')
+    
+    # Render view while injecting variables safely into your HTML layout blocks
+    return render_template('analysis.html', 
+                           metrics=SESSION_CACHE['metrics'], 
+                           total_time=SESSION_CACHE['total_time'],
+                           grafana_ip=grafana_ip,
+                           dashboard_uid=dashboard_uid)
 
 @app.route('/download-results')
 def download_results():
