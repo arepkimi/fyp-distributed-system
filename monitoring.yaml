@@ -27,10 +27,21 @@ spec:
           value: "Admin"
         - name: GF_PANELS_DISABLE_SANITIZE_HTML
           value: "true"
+        # Tell Grafana exactly where the cluster mounted your key file
+        - name: GF_AUTH_GOOGLE_SERVICE_ACCOUNT_KEY_FILE
+          value: "/var/secrets/google/credentials.json"
+        volumeMounts:
+        - name: google-cloud-key-volume
+          mountPath: "/var/secrets/google"
+          readOnly: true
         resources:
           limits:
             cpu: "500m"
             memory: "512Mi"
+      volumes:
+      - name: google-cloud-key-volume
+        secret:
+          secretName: fyp-grafana-creds
 ---
 apiVersion: v1
 kind: Service
