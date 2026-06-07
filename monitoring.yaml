@@ -27,8 +27,6 @@ spec:
           value: "Admin"
         - name: GF_PANELS_DISABLE_SANITIZE_HTML
           value: "true"
-        securityContext:
-          runAsUser: 472
         resources:
           limits:
             cpu: "500m"
