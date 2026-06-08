@@ -35,7 +35,7 @@ app = Flask(__name__)
 # This removes the 2-3 second Linux kernel process creation lag
 
 
-GLOBAL_PARALLEL_EXECUTOR = ProcessPoolExecutor(max_workers=4)
+GLOBAL_PARALLEL_EXECUTOR = ProcessPoolExecutor(max_workers=3)
 
 SESSION_CACHE = {
     'processed_zip_bytes': None,
@@ -249,7 +249,7 @@ def process():
                     processed_outputs.append(None)
                 
         elif mode == 'parallel':
-            num_cores = 4
+            num_cores = 3
             def chunkify(lst, n):
                 return [lst[i::n] for i in range(n)]
             
