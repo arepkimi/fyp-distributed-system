@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>FYPsystem | Menu</title>
+    <style>
+        /* Modern Side-Split Presentation Architecture Layout */
+        body { 
+            background: #1e293b; 
+            color: #f8fafc; 
+            min-height: 100vh; 
+            margin: 0;
+            padding: 0;
+            display: flex; 
+            font-family: system-ui, -apple-system, sans-serif;
+            overflow-x: hidden;
+        }
+
+        .split-viewport {
+            display: flex;
+            width: 100%;
+            min-height: 100vh;
+        }
+
+        /* LEFT SIDE HERO PANEL - Holds the Master Title Elements */
+        .left-hero-panel {
+            flex: 1.2; 
+            background: #111827; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px;
+            position: relative;
+        }
+
+        .deco-dots {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 30px;
+        }
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #0d6efd;
+        }
+        .dot:nth-child(2) { background: #cbd5e1; }
+        .dot:nth-child(3) { background: #64748b; }
+
+        .left-hero-panel h1 {
+            font-size: 3.5em;
+            font-weight: 800;
+            line-height: 1.15;
+            letter-spacing: -1.5px;
+            color: #ffffff;
+            margin: 0;
+        }
+
+        .left-hero-panel .system-subtext {
+            font-size: 1.2em;
+            color: #64748b;
+            margin-top: 25px;
+            font-weight: 500;
+        }
+
+        /* RIGHT SIDE NAVIGATION PANEL - Holds the Menu Options */
+        .right-nav-panel {
+            flex: 1;
+            background: #1e293b; 
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 80px;
+            gap: 25px; 
+        }
+
+        /* Premium Crisp Cards matching your index framework parameters */
+        .nav-card { 
+            display: flex;
+            flex-direction: column; 
+            align-items: flex-start; 
+            justify-content: center;
+            padding: 45px 40px;     
+            border-radius: 16px;    
+            text-decoration: none; 
+            background: #ffffff; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+            transition: all 0.25s ease-in-out; 
+            box-sizing: border-box;
+            border: 2px solid transparent;
+            width: 100%;
+            max-width: 480px; 
+        }
+
+        .card-main-title {
+            font-size: 1.5em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            color: #1e293b; 
+            transition: color 0.2s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-sub-title {
+            font-size: 0.95em;
+            color: #64748b; 
+            font-weight: 500;
+        }
+
+        .nav-card:hover { 
+            transform: translateX(8px); 
+            box-shadow: 0 16px 35px rgba(13, 110, 253, 0.2); 
+            border-color: #0d6efd; 
+        }
+        
+        .nav-card:hover .card-main-title {
+            color: #0d6efd; 
+        }
+
+        @media (max-width: 992px) {
+            body { display: block; }
+            .split-viewport { flex-direction: column; }
+            .left-hero-panel, .right-nav-panel { padding: 40px; flex: none; width: 100%; }
+            .left-hero-panel h1 { font-size: 2.5em; }
+            .nav-card { max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="split-viewport">
+    
+    <div class="left-hero-panel">
+        <div class="deco-dots">
+            <div class="dot"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <h1>DISTRIBUTED<br>PROCESSING SYSTEM</h1>
+        <div class="system-subtext">With Containerised Web Service</div>
+    </div>
+
+    <div class="right-nav-panel">
+        
+        <a href="/benchmark-engine" class="nav-card">
+            <span class="card-main-title">⚙️ Architecture Selection</span>
+            <span class="card-sub-title">Workload Processing and Architecture Testing</span>
+        </a>
+
+        <a href="/cluster-management" class="nav-card">
+            <span class="card-main-title">🛠️ Cluster Management</span>
+            <span class="card-sub-title">Monitor and Manage existing pods</span>
+        </a>
+
+    </div>
+
+</div>
+
+</body>
+</html>
