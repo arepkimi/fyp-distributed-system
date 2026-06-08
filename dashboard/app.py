@@ -5,6 +5,9 @@ import base64
 import zipfile
 import subprocess
 import re
+import ssl
+import json
+import urllib.request
 from flask import Flask, render_template, request, send_file, redirect, url_for
 import grpc
 import photo_pb2
@@ -84,61 +87,115 @@ def receive_completed_image():
     return "BAD_REQUEST", 400
 
 
-# 🌟 ROOT ACCESSED ROUTE: NOW PRESENTS THE MENU SYSTEM
+# 🌟 STEP 1: ROUTE THE ROOT ACCESSED PATHWAY DIRECTLY TO MENU.HTML
 @app.route('/')
 def index():
     return render_template('menu.html')
 
 
-# 🌟 BENCHMARK ROUTE: ORIGINAL FORM ACCESSIBLE HERE
+# 🌟 STEP 2: MAP THE BENCHMARK OPTION TO THE SYSTEM SELECTION FORM CARD
 @app.route('/benchmark-engine')
 def benchmark_engine():
     return render_template('index.html')
 
 
-# 🌟 LIVE CLUSTER MANAGER: READS REAL GKE TERMINAL OUTPUT
+# 🌟 STEP 3: READ LIVE CLUSTER POD DATA DIRECTLY VIA NATIVE REST API (NO DUMMY FALLBACKS)
 @app.route('/cluster-management')
 def cluster_management():
     live_containers = []
-    try:
-        # Executes standard foolproof get pods command
-        result = subprocess.run(['kubectl', 'get', 'pods'], capture_output=True, text=True, check=True)
-        lines = result.stdout.strip().split('\n')
-        
-        if len(lines) > 1:
-            # Skips column labels header row ("NAME READY STATUS RESTARTS AGE")
-            for line in lines[1:]:
-                if not line.strip():
-                    continue
-                parts = line.split()
-                # Matches your exact terminal whitespace composition layout
-                if len(parts) >= 5:
+    
+    # GKE container environment structural token paths
+    token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    namespace_path = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+    
+    if os.path.exists(token_path) and os.path.exists(namespace_path):
+        try:
+            with open(token_path, "r") as f:
+                token = f.read().strip()
+            with open(namespace_path, "r") as f:
+                namespace = f.read().strip()
+                
+            # Establish raw connection directly to the internal Kubernetes control engine 
+            url = f"https://kubernetes.default.svc/api/v1/namespaces/{namespace}/pods"
+            req = urllib.request.Request(url)
+            req.add_header("Authorization", f"Bearer {token}")
+            
+            # Trust internal routing loops safely without custom local SSL configuration maps
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            
+            with urllib.request.urlopen(req, context=ctx, timeout=5) as response:
+                data = json.loads(response.read().decode())
+                
+                for item in data.get("items", []):
+                    metadata = item.get("metadata", {})
+                    status_block = item.get("status", {})
+                    
+                    pod_name = metadata.get("name")
+                    pod_status = status_block.get("phase", "Unknown")
+                    
+                    # Parse dynamic system string values down to readable uptime loops
+                    start_time_str = status_block.get("startTime")
+                    pod_age = "Active"
+                    if start_time_str:
+                        try:
+                            clean_time = start_time_str.replace("Z", "")
+                            start_ts = time.mktime(time.strptime(clean_time.split(".")[0], "%Y-%m-%dT%H:%M:%S"))
+                            diff_seconds = int(time.time() - start_ts)
+                            
+                            if diff_seconds < 60:
+                                pod_age = f"{diff_seconds}s"
+                            elif diff_seconds < 3600:
+                                pod_age = f"{diff_seconds // 60}m"
+                            else:
+                                pod_age = f"{diff_seconds // 3600}h"
+                        except Exception:
+                            pod_age = "Active"
+
                     live_containers.append({
-                        'name': parts[0],    # Name column string
-                        'status': parts[2],  # Runtime Status column string
-                        'age': parts[4]      # Age tracking label string
+                        'name': pod_name,
+                        'status': pod_status,
+                        'age': pod_age
                     })
-    except Exception as e:
-        print(f"[LIVE PARSER EXCEPTION] Terminal pipe error: {e}")
-        live_containers = []
+        except Exception as e:
+            print(f"[REST API ERROR] Internal API query rejected: {e}")
+            live_containers = []
 
     return render_template('cluster.html', containers=live_containers)
 
 
-# 🌟 NUKE TARGET ROUTE: DELETES A SELECTED POD INSTANCE INSTANTLY
+# 🌟 STEP 4: REAL-TIME INDEPENDENT CONTAINER DELETION ENDPOINT (NUKE INTERACTION)
 @app.route('/nuke-target', methods=['POST'])
 def nuke_target():
     target_pod = request.form.get('pod_name', '')
-    if target_pod:
+    token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+    namespace_path = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+    
+    if target_pod and os.path.exists(token_path) and os.path.exists(namespace_path):
         try:
-            print(f"[ORCHESTRATION] Nuking pod element: {target_pod}")
-            subprocess.run(['kubectl', 'delete', 'pod', target_pod, '--grace-period=0', '--force'], check=True)
+            with open(token_path, "r") as f:
+                token = f.read().strip()
+            with open(namespace_path, "r") as f:
+                namespace = f.read().strip()
+                
+            url = f"https://kubernetes.default.svc/api/v1/namespaces/{namespace}/pods/{target_pod}"
+            req = urllib.request.Request(url, method="DELETE")
+            req.add_header("Authorization", f"Bearer {token}")
+            
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            
+            with urllib.request.urlopen(req, context=ctx, timeout=5) as response:
+                print(f"[ORCHESTRATION] API server accepted deletion stream for pod: {target_pod}")
         except Exception as e:
-            print(f"[ORCHESTRATION FAULT] Nuke pipeline command failed: {e}")
+            print(f"[ORCHESTRATION FAULT] REST engine deletion call failed: {e}")
+            
     return redirect(url_for('cluster_management'))
 
 
-# 🌟 SCALE TARGET ROUTE: SCALES WORKER DEPLOYMENTS EXCEPT THE DASHBOARD GATEWAY
+# 🌟 STEP 5: AUTOMATED DEPLOYMENT SCALE SYNC ENGINE (EXCLUDES FRONTEND GATEWAY)
 @app.route('/scale-target', methods=['POST'])
 def scale_target():
     try:
@@ -171,13 +228,34 @@ def scale_target():
             with open(yaml_path, 'w') as f:
                 f.write('---'.join(updated_sections))
 
-        # Task B: Issue real-time active cluster shell commands targeting worker deployments
-        target_processing_tiers = ["bw-worker-deployment", "bright-worker-deployment", "blur-worker-deployment"]
-        for deployment in target_processing_tiers:
-            try:
-                subprocess.run(['kubectl', 'scale', 'deployment', deployment, f'--replicas={user_replicas}'], capture_output=True)
-            except Exception:
-                pass
+        # Task B: Scale via internal REST APIs directly inside Google Cloud networking lanes
+        token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
+        namespace_path = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+        
+        if os.path.exists(token_path) and os.path.exists(namespace_path):
+            with open(token_path, "r") as f:
+                token = f.read().strip()
+            with open(namespace_path, "r") as f:
+                namespace = f.read().strip()
+                
+            target_processing_tiers = ["bw-worker-deployment", "bright-worker-deployment", "blur-worker-deployment"]
+            ctx = ssl.create_default_context()
+            ctx.check_hostname = False
+            ctx.verify_mode = ssl.CERT_NONE
+            
+            for deployment in target_processing_tiers:
+                try:
+                    url = f"https://kubernetes.default.svc/apis/apps/v1/namespaces/{namespace}/deployments/{deployment}/scale"
+                    payload = json.dumps({"spec": {"replicas": int(user_replicas)}}).encode('utf-8')
+                    
+                    req = urllib.request.Request(url, data=payload, method="PUT")
+                    req.add_header("Authorization", f"Bearer {token}")
+                    req.add_header("Content-Type", "application/json")
+                    
+                    with urllib.request.urlopen(req, context=ctx, timeout=5) as response:
+                        print(f"[ORCHESTRATION] Synced replica target scale for deployment: {deployment}")
+                except Exception as scale_inner_err:
+                    print(f"[API SCALE ERROR] Skipping individual component path: {scale_inner_err}")
 
     except Exception as scale_error:
         print(f"[ORCHESTRATION FAULT] Scaling execution failed: {scale_error}")
