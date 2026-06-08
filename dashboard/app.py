@@ -35,7 +35,7 @@ app = Flask(__name__)
 # This removes the 2-3 second Linux kernel process creation lag
 
 
-GLOBAL_PARALLEL_EXECUTOR = ProcessPoolExecutor(max_workers=6)
+GLOBAL_PARALLEL_EXECUTOR = ProcessPoolExecutor(max_workers=3)
 
 SESSION_CACHE = {
     'processed_zip_bytes': None,
