@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Pipeline Operational Results</title>
+    <title>Processing Results</title>
     <style>
         body { font-family: sans-serif; margin: 40px; background: #f8f9fa; color: #333; }
         .card { background: white; padding: 25px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); max-width: 900px; margin: 0 auto; }
@@ -18,10 +18,10 @@
 <body>
 
 <div class="card">
-    <h2>✔ Image Processing Complete</h2>
+    <h2>Image Processing Complete</h2>
     
     <div class="meta-banner">
-        Execution Mode Paradigm: <strong>{{ mode.upper() }}</strong> <br>
+        Execution Architecture: <strong>{{ mode.upper() }}</strong> <br>
         Total  Processing Latency: <strong>{{ total_time }} seconds</strong> <br>
         Total Images Processed: <strong>{{ count }} files</strong>
     </div>
@@ -31,7 +31,7 @@
         <a href="/" class="btn btn-secondary">← Back to Main Menu</a>
     </div>
 
-    <h3>Standardized Image Preview Manifest</h3>
+    <h3>Standardized Image Preview</h3>
     <div class="grid">
         {% for item in results %}
         <div class="img-container">
