@@ -15,6 +15,7 @@ spec:
       labels:
         app: fyp-dashboard
     spec:
+      automountServiceAccountToken: true
       containers:
       - name: gateway-container
         image: asia-southeast1-docker.pkg.dev/fyp-distributed-system-155462/fyp-images/dashboard-gateway:latest
