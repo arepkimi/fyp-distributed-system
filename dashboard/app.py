@@ -99,7 +99,7 @@ def benchmark_engine():
     return render_template('index.html')
 
 
-# 🌟 STEP 3: READ LIVE CLUSTER POD DATA DIRECTLY VIA NATIVE REST API (NO DUMMY FALLBACKS)
+# 🌟 STEP 3: READ LIVE CLUSTER POD DATA DIRECTLY VIA NATIVE REST API
 @app.route('/cluster-management')
 def cluster_management():
     live_containers = []
@@ -133,7 +133,12 @@ def cluster_management():
                     status_block = item.get("status", {})
                     
                     pod_name = metadata.get("name")
-                    pod_status = status_block.get("phase", "Unknown")
+                    
+                    # 🌟 FIX: Check if Kubernetes has initialized deletion workflows on this pod
+                    if metadata.get("deletionTimestamp") is not None:
+                        pod_status = "Terminating"
+                    else:
+                        pod_status = status_block.get("phase", "Unknown")
                     
                     # Parse dynamic system string values down to readable uptime loops
                     start_time_str = status_block.get("startTime")
@@ -286,7 +291,6 @@ def process():
     else:
         files_to_process.append({'filename': uploaded_file.filename, 'bytes': file_content})
 
-    # Flush the memory matrix before launching a distributed batch test
     if mode == 'distributed':
         DISTRIBUTED_MEMORY_CACHE.clear()
 
@@ -294,16 +298,10 @@ def process():
     processed_outputs = []
 
     try:
-        # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # --- IMPLEMENTED IDEA: Open ONE single connection channel pool context for this entire batch run ---
             with grpc.insecure_channel(BW_WORKER_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as batch_channel:
                 batch_stub = photo_pb2_grpc.PhotoProcessorStub(batch_channel)
                 
-                # =========================================================================
-                # OPTIMIZED BACKPRESSURE CONTROLLER: CONCURRENCY CONSTRAINED TO 3 WORKERS
-                # Throttles transmission velocity to prevent high-res gRPC channel drops.
-                # =========================================================================
                 with ThreadPoolExecutor(max_workers=3) as executor:
                     futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes'], batch_stub) for f in files_to_process]
                     results = [f.result() for f in futures]
@@ -315,12 +313,10 @@ def process():
             elapsed = 0
             start_poll = time.time()
 
-            # --- FIXED: POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
             while len(DISTRIBUTED_MEMORY_CACHE) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
                 elapsed = time.time() - start_poll
 
-            # Map compiled memory pieces back to output arrays sequentially
             for item in files_to_process:
                 filename = item['filename']
                 if filename in DISTRIBUTED_MEMORY_CACHE:
@@ -335,7 +331,6 @@ def process():
             
             file_chunks = chunkify(files_to_process, num_cores)
             
-            # Submits tasks directly to the warmed persistent pool instead of triggering cold creations
             futures = [GLOBAL_PARALLEL_EXECUTOR.submit(monolith.process_batch_of_images, chunk) for chunk in file_chunks]
             chunk_outputs = [f.result() for f in futures]
             processed_outputs = [None] * len(files_to_process)
@@ -345,15 +340,10 @@ def process():
                     if original_index < len(files_to_process):
                         processed_outputs[original_index] = out_bytes
         else:
-            # ===================================================================
-            # TRUE SEQUENTIAL MONOLITHIC TRACK (EDITED BLOCK ONLY)
-            # Process images one by one sequentially down a single timeline lane.
-            # ===================================================================
             for f in files_to_process:
                 out_bytes = monolith.process_image_to_bytes(f['bytes'])
                 processed_outputs.append(out_bytes)
 
-        # Packaging outcomes back into the Session State Memory
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as clean_zip:
             for item, out_bytes in zip(files_to_process, processed_outputs):
@@ -400,11 +390,9 @@ def update_metrics():
 
 @app.route('/analysis')
 def analysis():
-    # Fetch values dynamically populated inside your deployment YAML environments layer
     grafana_ip = os.environ.get('GRAFANA_EXTERNAL_IP', '34.126.99.181')
     dashboard_uid = os.environ.get('GRAFANA_DASHBOARD_UID', 'g24dbj')
     
-    # Render view while injecting variables safely into your HTML layout blocks
     return render_template('analysis.html', 
                            metrics=SESSION_CACHE['metrics'], 
                            total_time=SESSION_CACHE['total_time'],
