@@ -14,11 +14,7 @@ import photo_pb2
 import photo_pb2_grpc
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor
 
-# =======================================================================
-# THREAD CONFIGURATION PASS FOR TRUE MONOLITHIC BENCHMARKING
-# These environment variables must be declared BEFORE importing cv2/numpy
-# to restrict their internal multi-threading engines to 1 single thread.
-# =======================================================================
+# to restrict multi-threading engines to 1 single thread.
 os.environ["OMP_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["OPENBLAS_NUM_THREADS"] = "1"
@@ -26,20 +22,19 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 import cv2
-# Force OpenCV's internal hardware-accelerated thread pool to use exactly 1 thread
+# Force OpenCV's to use exactly 1 thread
 cv2.setNumThreads(0) 
 
-# IMPORT YOUR SEPARATE CORE ENGINE MODULE HERE
+
 import monolith 
 
 app = Flask(__name__)
 
-# =======================================================================
-# GLOBAL OPTIMIZER: PERSISTENT MULTI-CORE WORKER POOL
-# Instantiating this at startup keeps the 3 OS child processes "warm".
-# This removes the 2-3 second Linux kernel process creation lag from 
-# your measured execution timeline.
-# =======================================================================
+
+
+# This removes the 2-3 second Linux kernel process creation lag
+
+
 GLOBAL_PARALLEL_EXECUTOR = ProcessPoolExecutor(max_workers=3)
 
 SESSION_CACHE = {
@@ -73,9 +68,9 @@ def push_to_assembly_line_shared(filename, image_bytes, stub):
     return False
 
 
-# -----------------------------------------------------------------------
-# NEW: LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
-# -----------------------------------------------------------------------
+
+#  HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
+
 @app.route('/receiver', methods=['POST'])
 def receive_completed_image():
     if 'image' in request.files and 'filename' in request.form:
@@ -87,19 +82,19 @@ def receive_completed_image():
     return "BAD_REQUEST", 400
 
 
-# 🌟 STEP 1: ROUTE THE ROOT ACCESSED PATHWAY DIRECTLY TO MENU.HTML
+#  ROUTE TO MENU.HTML
 @app.route('/')
 def index():
     return render_template('menu.html')
 
 
-# 🌟 STEP 2: MAP THE BENCHMARK OPTION TO THE SYSTEM SELECTION FORM CARD
+# MAP THE BENCHMARK OPTION 
 @app.route('/benchmark-engine')
 def benchmark_engine():
     return render_template('index.html')
 
 
-# 🌟 STEP 3: READ LIVE CLUSTER POD DATA DIRECTLY VIA NATIVE REST API
+#  READ LIVE CLUSTER POD DATA DIRECTLY
 @app.route('/cluster-management')
 def cluster_management():
     live_containers = []
@@ -170,7 +165,7 @@ def cluster_management():
     return render_template('cluster.html', containers=live_containers)
 
 
-# 🌟 STEP 4: REAL-TIME INDEPENDENT CONTAINER DELETION ENDPOINT (NUKE INTERACTION)
+#  REAL-TIME INDEPENDENT CONTAINER DELETION 
 @app.route('/nuke-target', methods=['POST'])
 def nuke_target():
     target_pod = request.form.get('pod_name', '')
@@ -200,9 +195,6 @@ def nuke_target():
     return redirect(url_for('cluster_management'))
 
 
-# =======================================================================
-# ALL ORIGINAL PROCESSING LOGIC REMAINS 100% UNTOUCHED BELOW THIS LINE
-# =======================================================================
 @app.route('/process', methods=['POST'])
 def process():
     mode = request.form.get('mode')
