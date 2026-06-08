@@ -54,7 +54,7 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
 
 def serve():
    
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=20))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=6))
     photo_pb2_grpc.add_PhotoProcessorServicer_to_server(PhotoProcessor(), server)
     server.add_insecure_port('[::]:50052')
     server.start()
