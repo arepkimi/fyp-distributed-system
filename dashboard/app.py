@@ -71,7 +71,7 @@ def push_to_assembly_line_shared(filename, image_bytes, stub):
 
 
 # -----------------------------------------------------------------------
-# NEW: LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
+# LIGHTWEIGHT HTTP RECEIVER ENDPOINT (Reuses existing Port 5000)
 # -----------------------------------------------------------------------
 @app.route('/receiver', methods=['POST'])
 def receive_completed_image():
@@ -84,48 +84,49 @@ def receive_completed_image():
     return "BAD_REQUEST", 400
 
 
-# 🌟 NEW ADMIN MANAGEMENT ROUTE: RENDER SPLIT MENU AS THE PRIMARY MAIN PAGE
+# 🌟 ROOT LEVEL ROUTE RENDER: MAIN MENU HOME PAGE
 @app.route('/')
 def index():
     return render_template('menu.html')
 
 
-# 🌟 NEW ADMIN MANAGEMENT ROUTE: MOVE BENCHMARK IMAGE portal TO EXPLICIT ENDPOINT
+# 🌟 BENCHMARK SELECTION ROUTE (PREVIOUS ROOT INDEX)
 @app.route('/benchmark-engine')
 def benchmark_engine():
     return render_template('index.html')
 
 
-# 🌟 NEW ADMIN MANAGEMENT ROUTE: LIVE TERMINAL COHESIVE POD TRACKER 
+# 🌟 REAL LIVE CLUSTER POD PARSER (FULLY CORRECTED INDEXES MATCHING YOUR TERMINAL OUTPUT)
 @app.route('/cluster-management')
 def cluster_management():
     live_containers = []
     try:
-        # Run raw foolproof command that naturally matches your terminal output printout strings
+        # Run raw, standard kubectl get pods command
         result = subprocess.run(['kubectl', 'get', 'pods'], capture_output=True, text=True, check=True)
         lines = result.stdout.strip().split('\n')
         
         if len(lines) > 1:
-            # Skip header line ("NAME READY STATUS RESTARTS AGE")
+            # Skip the table header row completely ("NAME READY STATUS RESTARTS AGE")
             for line in lines[1:]:
                 if not line.strip():
                     continue
+                
                 parts = line.split()
-                # Safely slice parts knowing index 0=Name, index 2=Status, index 4=Age 
+                # Your terminal output strictly produces 5 columns: [NAME, READY, STATUS, RESTARTS, AGE]
                 if len(parts) >= 5:
                     live_containers.append({
-                        'name': parts[0],
-                        'status': parts[2],
-                        'age': parts[4]
+                        'name': parts[0],    # e.g., blur-worker-deployment-cb8cf44df-2wvtc
+                        'status': parts[2],  # e.g., Running
+                        'age': parts[4]      # e.g., 4m
                     })
     except Exception as e:
-        print(f"[LIVE CLUSTER FAULT] Error reading dynamic kubectl process streams: {e}")
+        print(f"[LIVE PARSER FAULT] Error reading dynamic kubectl process streams: {e}")
         live_containers = []
 
     return render_template('cluster.html', containers=live_containers)
 
 
-# 🌟 NEW ADMIN MANAGEMENT ROUTE: ADMINISTRATIVE DELETION COMMAND STREAM (NUKE)
+# 🌟 ADMINISTRATIVE DELETION COMMAND STREAM (NUKE)
 @app.route('/nuke-target', methods=['POST'])
 def nuke_target():
     target_pod = request.form.get('pod_name', '')
@@ -138,7 +139,7 @@ def nuke_target():
     return redirect(url_for('cluster_management'))
 
 
-# 🌟 NEW ADMIN MANAGEMENT ROUTE: LIVE UNIFIED REPLICA MULTIPLIER SCALING ENGINE
+# 🌟 LIVE UNIFIED REPLICA MULTIPLIER SCALING ENGINE
 @app.route('/scale-target', methods=['POST'])
 def scale_target():
     try:
@@ -208,7 +209,6 @@ def process():
     else:
         files_to_process.append({'filename': uploaded_file.filename, 'bytes': file_content})
 
-    # Flush the memory matrix before launching a distributed batch test
     if mode == 'distributed':
         DISTRIBUTED_MEMORY_CACHE.clear()
 
@@ -216,16 +216,10 @@ def process():
     processed_outputs = []
 
     try:
-        # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # --- IMPLEMENTED IDEA: Open ONE single connection channel pool context for this entire batch run ---
             with grpc.insecure_channel(BW_WORKER_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as batch_channel:
                 batch_stub = photo_pb2_grpc.PhotoProcessorStub(batch_channel)
                 
-                # =========================================================================
-                # OPTIMIZED BACKPRESSURE CONTROLLER: CONCURRENCY CONSTRAINED TO 3 WORKERS
-                # Throttles transmission velocity to prevent high-res gRPC channel drops.
-                # =========================================================================
                 with ThreadPoolExecutor(max_workers=3) as executor:
                     futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes'], batch_stub) for f in files_to_process]
                     results = [f.result() for f in futures]
@@ -237,12 +231,10 @@ def process():
             elapsed = 0
             start_poll = time.time()
 
-            # --- FIXED: POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
             while len(DISTRIBUTED_MEMORY_CACHE) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
                 elapsed = time.time() - start_poll
 
-            # Map compiled memory pieces back to output arrays sequentially
             for item in files_to_process:
                 filename = item['filename']
                 if filename in DISTRIBUTED_MEMORY_CACHE:
@@ -257,7 +249,6 @@ def process():
             
             file_chunks = chunkify(files_to_process, num_cores)
             
-            # Submits tasks directly to the warmed persistent pool instead of triggering cold creations
             futures = [GLOBAL_PARALLEL_EXECUTOR.submit(monolith.process_batch_of_images, chunk) for chunk in file_chunks]
             chunk_outputs = [f.result() for f in futures]
             processed_outputs = [None] * len(files_to_process)
@@ -267,15 +258,10 @@ def process():
                     if original_index < len(files_to_process):
                         processed_outputs[original_index] = out_bytes
         else:
-            # ===================================================================
-            # TRUE SEQUENTIAL MONOLITHIC TRACK (EDITED BLOCK ONLY)
-            # Process images one by one sequentially down a single timeline lane.
-            # ===================================================================
             for f in files_to_process:
                 out_bytes = monolith.process_image_to_bytes(f['bytes'])
                 processed_outputs.append(out_bytes)
 
-        # Packaging outcomes back into the Session State Memory
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as clean_zip:
             for item, out_bytes in zip(files_to_process, processed_outputs):
@@ -322,11 +308,9 @@ def update_metrics():
 
 @app.route('/analysis')
 def analysis():
-    # Fetch values dynamically populated inside your deployment YAML environments layer
     grafana_ip = os.environ.get('GRAFANA_EXTERNAL_IP', '34.126.99.181')
     dashboard_uid = os.environ.get('GRAFANA_DASHBOARD_UID', 'g24dbj')
     
-    # Render view while injecting variables safely into your HTML layout blocks
     return render_template('analysis.html', 
                            metrics=SESSION_CACHE['metrics'], 
                            total_time=SESSION_CACHE['total_time'],
