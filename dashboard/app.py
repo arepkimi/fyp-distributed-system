@@ -84,79 +84,68 @@ def receive_completed_image():
     return "BAD_REQUEST", 400
 
 
-# 🌟 1. ROOT LEVEL ROUTE RENDER: MAIN MENU HOME PAGE
+# 🌟 NEW ADMIN MANAGEMENT ROUTE: RENDER SPLIT MENU AS THE PRIMARY MAIN PAGE
 @app.route('/')
 def index():
     return render_template('menu.html')
 
 
-# 🌟 2. BENCHMARK SELECTION ROUTE (PREVIOUS ROOT INDEX)
+# 🌟 NEW ADMIN MANAGEMENT ROUTE: MOVE BENCHMARK IMAGE portal TO EXPLICIT ENDPOINT
 @app.route('/benchmark-engine')
 def benchmark_engine():
     return render_template('index.html')
 
 
-# 🌟 3. REAL LIVE CLUSTER POD PARSER (ZERO MOCK DATA)
+# 🌟 NEW ADMIN MANAGEMENT ROUTE: LIVE TERMINAL COHESIVE POD TRACKER 
 @app.route('/cluster-management')
 def cluster_management():
     live_containers = []
     try:
-        # Request strict, cleanly-bounded string outputs from your GKE cluster API
-        result = subprocess.run(
-            ['kubectl', 'get', 'pods', '-o', 'custom-columns=NAME:.metadata.name,STATUS:.status.phase,AGE:.metadata.creationTimestamp'],
-            capture_output=True, text=True, check=True
-        )
+        # Run raw foolproof command that naturally matches your terminal output printout strings
+        result = subprocess.run(['kubectl', 'get', 'pods'], capture_output=True, text=True, check=True)
         lines = result.stdout.strip().split('\n')
         
         if len(lines) > 1:
+            # Skip header line ("NAME READY STATUS RESTARTS AGE")
             for line in lines[1:]:
                 if not line.strip():
                     continue
                 parts = line.split()
-                if len(parts) >= 3:
-                    pod_name = parts[0]
-                    pod_status = parts[1]
-                    raw_age = parts[2]
-                    
-                    # Compute simplified visual presentation timing metrics out of GKE logs
-                    if "T" in raw_age and "Z" in raw_age:
-                        pod_age = "Active"
-                    else:
-                        pod_age = raw_age
-                        
+                # Safely slice parts knowing index 0=Name, index 2=Status, index 4=Age 
+                if len(parts) >= 5:
                     live_containers.append({
-                        'name': pod_name,
-                        'status': pod_status,
-                        'age': pod_age
+                        'name': parts[0],
+                        'status': parts[2],
+                        'age': parts[4]
                     })
     except Exception as e:
-        print(f"[LIVE PARSER FAULT] Kubectl connection trace rejected: {e}")
+        print(f"[LIVE CLUSTER FAULT] Error reading dynamic kubectl process streams: {e}")
         live_containers = []
 
     return render_template('cluster.html', containers=live_containers)
 
 
-# 🌟 4. DIRECT ADMINISTRATIVE CONTAINER DELETION ENDPOINT
+# 🌟 NEW ADMIN MANAGEMENT ROUTE: ADMINISTRATIVE DELETION COMMAND STREAM (NUKE)
 @app.route('/nuke-target', methods=['POST'])
 def nuke_target():
     target_pod = request.form.get('pod_name', '')
     if target_pod:
         try:
-            print(f"[ORCHESTRATION] Issuing dynamic force-deletion statement on pod instance: {target_pod}")
+            print(f"[ORCHESTRATION] Instantly force-evicting cluster container element: {target_pod}")
             subprocess.run(['kubectl', 'delete', 'pod', target_pod, '--grace-period=0', '--force'], check=True)
         except Exception as e:
-            print(f"[ORCHESTRATION ERROR] Execution failure on cluster deletion pipe: {e}")
+            print(f"[ERROR] Subprocess could not clear pod context entity: {e}")
     return redirect(url_for('cluster_management'))
 
 
-# 🌟 5. GLOBAL REPLICA SCALING MULTIPLEXER (EXCLUDES DASHBOARD)
+# 🌟 NEW ADMIN MANAGEMENT ROUTE: LIVE UNIFIED REPLICA MULTIPLIER SCALING ENGINE
 @app.route('/scale-target', methods=['POST'])
 def scale_target():
     try:
         user_replicas = request.form.get('replica_count', '1')
-        print(f"[ORCHESTRATION] Broadscale synchronization initiated. Targeting work environments to replica limit: {user_replicas}")
+        print(f"[ORCHESTRATION] Scaling independent microservice layers to target multiplier value: {user_replicas}")
 
-        # Update disk file registers for testing reference
+        # Task A: Regex text manipulation pass inside local file registers
         yaml_path = 'deploy-all.yaml'
         if os.path.exists(yaml_path):
             with open(yaml_path, 'r') as f:
@@ -169,12 +158,12 @@ def scale_target():
                     if name_search:
                         deployment_name = name_search.group(1)
                         
-                        # EXCLUSION RULE: Leave the front-facing UI gateway context completely untouched!
+                        # EXCLUSION ASSIGNMENT: Skip modification loops for dashboard containers
                         if "dashboard" in deployment_name:
                             updated_sections.append(section)
                             continue
 
-                        # Apply regex patching transformations to internal specifications fields
+                        # Find replicas line within this block and substitute the scale factor string integer
                         section = re.sub(r'(replicas:\s*)(\d+)', rf'\g<1>{user_replicas}', section)
 
                 updated_sections.append(section)
@@ -182,16 +171,16 @@ def scale_target():
             with open(yaml_path, 'w') as f:
                 f.write('---'.join(updated_sections))
 
-        # Synchronize live cloud state tracking modules
-        target_processing_tiers = ["bw-worker-deployment", "bright-worker-deployment", "blur-worker-deployment"]
-        for deployment in target_processing_tiers:
+        # Task B: Execute live kubectl commands scaling all distinct distributed worker pipelines
+        target_microservices = ["bw-worker-deployment", "bright-worker-deployment", "blur-worker-deployment"]
+        for deployment in target_microservices:
             try:
                 subprocess.run(['kubectl', 'scale', 'deployment', deployment, f'--replicas={user_replicas}'], capture_output=True)
             except Exception:
                 pass
 
     except Exception as scale_error:
-        print(f"[SCALE FAULT] Exception intercepted on orchestration run: {scale_error}")
+        print(f"[SCALE ERROR] Dynamic scaling module encountered an execution exception: {scale_error}")
 
     return redirect(url_for('cluster_management'))
 
