@@ -35,7 +35,7 @@ spec:
         - name: GRAFANA_EXTERNAL_IP
           value: "34.126.99.181"
         - name: GRAFANA_DASHBOARD_UID
-          value: "g7zhq6"
+          value: "gjsshp"
 ---
 apiVersion: v1
 kind: Service
