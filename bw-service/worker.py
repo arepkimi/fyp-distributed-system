@@ -24,7 +24,7 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
             context.set_details("Corrupt image bytes.")
             return photo_pb2.PhotoResponse()
 
-        # --- True Black & White Transformation ---
+        #  Black & White Transformation 
         result = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         
         _, buffer = cv2.imencode('.jpg', result)
