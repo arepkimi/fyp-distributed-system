@@ -7,7 +7,7 @@ from concurrent import futures
 import photo_pb2
 import photo_pb2_grpc
 
-# Resolve the central Flask Dashboard routing address via K8s CoreDNS
+#  central Flask Dashboard routing address 
 DASHBOARD_HTTP_ADDR = os.getenv('DASHBOARD_ADDR', 'http://fyp-dashboard-service:80/receiver')
 
 
@@ -30,9 +30,9 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
         _, buffer = cv2.imencode('.jpg', result)
         image_bytes = buffer.tobytes()
 
-        # -----------------------------------------------------------------------
-        # FIXED: LOOP CLOSED OVER INTERNAL HTTP TO ELIMINATE PHYSICAL NODE CO-LOCATION
-        # -----------------------------------------------------------------------
+       
+        #  LOOP CLOSED OVER INTERNAL HTTP 
+       
         try:
             payload_file = {'image': (filename, image_bytes, 'image/jpeg')}
             payload_data = {'filename': filename}
