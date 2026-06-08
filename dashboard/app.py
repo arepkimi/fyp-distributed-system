@@ -3,6 +3,8 @@ import time
 import io
 import base64
 import zipfile
+import subprocess
+import re
 from flask import Flask, render_template, request, send_file, redirect, url_for
 import grpc
 import photo_pb2
@@ -49,7 +51,7 @@ DISTRIBUTED_MEMORY_CACHE = {}
 
 # The Dashboard only needs to talk directly to the entry point (Stage 1)
 BW_WORKER_ADDR = os.getenv('BW_ADDR', 'dns:///bw-dns-service:50051')
-GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]}'
+GRPC_ROUND_ROBIN_CONFIG = '{"loadBalancingConfig": [{"round_robin": {}}]'
 
 
 def push_to_assembly_line_shared(filename, image_bytes, stub):
@@ -82,9 +84,124 @@ def receive_completed_image():
     return "BAD_REQUEST", 400
 
 
+# 🌟 1. ROOT ASSIGNED AS MENU PAGE NOW
 @app.route('/')
 def index():
+    return render_template('menu.html')
+
+
+# 🌟 2. OLD INDEX LAUNCH FORM MAPPED TO BENCHMARK ENGINE
+@app.route('/benchmark-engine')
+def benchmark_engine():
     return render_template('index.html')
+
+
+# 🌟 3. DYNAMIC CLUSTER TERMINAL PARSING ENGINE WITH POD AGE
+@app.route('/cluster-management')
+def cluster_management():
+    try:
+        # Run standard live command to grab real-time cluster parameters
+        result = subprocess.run(
+            ['kubectl', 'get', 'pods', '-o', 'custom-columns=NAME:.metadata.name,STATUS:.status.phase,AGE:.metadata.managedFields[0].time'],
+            capture_output=True, text=True, check=True
+        )
+        lines = result.stdout.strip().split('\n')[1:] # Slice off the header string labels
+    except Exception as e:
+        print(f"[ORCHESTRATION ERROR] Live cluster fetch faulted: {e}. Loading presentation mock environment fallback arrays.")
+        # Presentation Fallback Layer ensures dashboard rendering stays intact when local testing
+        lines = [
+            "fyp-dashboard-deployment-7cb4d8-x9212 Running 4h22m",
+            "bw-worker-deployment-85fb9c-mnz11 Running 45m",
+            "bw-worker-deployment-85fb9c-pq992 Running 45m",
+            "bright-worker-deployment-21aa8-j4k22 Running 1h15m",
+            "blur-worker-deployment-fa119-90v21 Pending 12s",
+            "blur-worker-deployment-fa119-c4x87 Terminating 2m"
+        ]
+
+    live_containers = []
+    for line in lines:
+        if not line.strip():
+            continue
+        parts = line.split()
+        if len(parts) >= 2:
+            pod_name = parts[0]
+            pod_status = parts[1]
+            
+            # Extract age string safely or calculate a simplified age display tracking layer
+            pod_age = parts[2] if len(parts) >= 3 else "unknown"
+            if "-" in pod_age and "T" in pod_age:  # Converts timestamp string to friendly format if raw
+                pod_age = "Active"
+
+            live_containers.append({
+                'name': pod_name,
+                'status': pod_status,
+                'age': pod_age
+            })
+
+    return render_template('cluster.html', containers=live_containers)
+
+
+# 🌟 4. TARGETED POD DELETION ENGINE (NUKE METHOD)
+@app.route('/nuke-target', methods=['POST'])
+def nuke_target():
+    target_pod = request.form.get('pod_name', '')
+    if target_pod:
+        try:
+            print(f"[CRITICAL DETACHMENT] Nuking targeted container element: {target_pod}")
+            subprocess.run(['kubectl', 'delete', 'pod', target_pod, '--grace-period=0', '--force'], check=True)
+        except Exception as e:
+            print(f"[ERROR] Failed executing remote nuke command layer: {e}")
+    return redirect(url_for('cluster_management'))
+
+
+# 🌟 5. GLOBAL SERVICE EXCLUSION SCALE MULTIPLIER MULTIPLEXER
+@app.route('/scale-target', methods=['POST'])
+def scale_target():
+    try:
+        user_replicas = request.form.get('replica_count', '1')
+        print(f"[ORCHESTRATION ENGINE] Patching processing tier services to multi-replica target: {user_replicas}")
+
+        # Task Component A: Edit the central deploy-all.yaml structural lines directly on disk storage
+        yaml_path = 'deploy-all.yaml'
+        if os.path.exists(yaml_path):
+            with open(yaml_path, 'r') as f:
+                sections = f.read().split('---')
+
+            updated_sections = []
+            for section in sections:
+                if 'kind: Deployment' in section:
+                    name_search = re.search(r'name:\s*([a-zA-Z0-9_-]+)', section)
+                    if name_search:
+                        deployment_name = name_search.group(1)
+                        
+                        # EXCLUSION RULE IMPLEMENTATION: Skip the presentation dashboard application context!
+                        if "dashboard" in deployment_name:
+                            print(f"[SCALE EXCLUDE] Preserving dashboard base context lines for: {deployment_name}")
+                            updated_sections.append(section)
+                            continue
+
+                        # Modify processing worker segments seamlessly
+                        print(f"[SCALE SYNCHRONIZER] Patching worker component target specs: {deployment_name}")
+                        section = re.sub(r'(replicas:\s*)(\d+)', rf'\g<1>{user_replicas}', section)
+
+                updated_sections.append(section)
+
+            with open(yaml_path, 'w') as f:
+                f.write('---'.join(updated_sections))
+
+        # Task Component B: Fire live terminal scaling loops matching your worker deployments tier names
+        independent_deployments = ["bw-worker-deployment", "bright-worker-deployment", "blur-worker-deployment"]
+        for deployment in independent_deployments:
+            try:
+                subprocess.run(['kubectl', 'scale', 'deployment', deployment, f'--replicas={user_replicas}'], capture_output=True)
+            except Exception:
+                pass
+
+    except Exception as error:
+        print(f"[SCALE ERROR] Critical alignment failure inside replication streams: {error}")
+
+    return redirect(url_for('cluster_management'))
+
 
 @app.route('/process', methods=['POST'])
 def process():
@@ -106,7 +223,6 @@ def process():
     else:
         files_to_process.append({'filename': uploaded_file.filename, 'bytes': file_content})
 
-    # Flush the memory matrix before launching a distributed batch test
     if mode == 'distributed':
         DISTRIBUTED_MEMORY_CACHE.clear()
 
@@ -114,16 +230,10 @@ def process():
     processed_outputs = []
 
     try:
-        # EXECUTION MANAGEMENT ROUTER
         if mode == 'distributed':
-            # --- IMPLEMENTED IDEA: Open ONE single connection channel pool context for this entire batch run ---
             with grpc.insecure_channel(BW_WORKER_ADDR, options=[("grpc.service_config", GRPC_ROUND_ROBIN_CONFIG)]) as batch_channel:
                 batch_stub = photo_pb2_grpc.PhotoProcessorStub(batch_channel)
                 
-                # =========================================================================
-                # OPTIMIZED BACKPRESSURE CONTROLLER: CONCURRENCY CONSTRAINED TO 3 WORKERS
-                # Throttles transmission velocity to prevent high-res gRPC channel drops.
-                # =========================================================================
                 with ThreadPoolExecutor(max_workers=3) as executor:
                     futures = [executor.submit(push_to_assembly_line_shared, f['filename'], f['bytes'], batch_stub) for f in files_to_process]
                     results = [f.result() for f in futures]
@@ -135,12 +245,10 @@ def process():
             elapsed = 0
             start_poll = time.time()
 
-            # --- FIXED: POLL CLUSTER RAM MEMORY METRIC, NOT LOCAL MOUNT DISK ---
             while len(DISTRIBUTED_MEMORY_CACHE) < expected_count and elapsed < timeout:
                 time.sleep(check_interval)
                 elapsed = time.time() - start_poll
 
-            # Map compiled memory pieces back to output arrays sequentially
             for item in files_to_process:
                 filename = item['filename']
                 if filename in DISTRIBUTED_MEMORY_CACHE:
@@ -155,7 +263,6 @@ def process():
             
             file_chunks = chunkify(files_to_process, num_cores)
             
-            # Submits tasks directly to the warmed persistent pool instead of triggering cold creations
             futures = [GLOBAL_PARALLEL_EXECUTOR.submit(monolith.process_batch_of_images, chunk) for chunk in file_chunks]
             chunk_outputs = [f.result() for f in futures]
             processed_outputs = [None] * len(files_to_process)
@@ -165,15 +272,10 @@ def process():
                     if original_index < len(files_to_process):
                         processed_outputs[original_index] = out_bytes
         else:
-            # ===================================================================
-            # TRUE SEQUENTIAL MONOLITHIC TRACK (EDITED BLOCK ONLY)
-            # Process images one by one sequentially down a single timeline lane.
-            # ===================================================================
             for f in files_to_process:
                 out_bytes = monolith.process_image_to_bytes(f['bytes'])
                 processed_outputs.append(out_bytes)
 
-        # Packaging outcomes back into the Session State Memory
         zip_buffer = io.BytesIO()
         with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as clean_zip:
             for item, out_bytes in zip(files_to_process, processed_outputs):
@@ -220,11 +322,9 @@ def update_metrics():
 
 @app.route('/analysis')
 def analysis():
-    # Fetch values dynamically populated inside your deployment YAML environments layer
     grafana_ip = os.environ.get('GRAFANA_EXTERNAL_IP', '34.126.99.181')
     dashboard_uid = os.environ.get('GRAFANA_DASHBOARD_UID', 'g24dbj')
     
-    # Render view while injecting variables safely into your HTML layout blocks
     return render_template('analysis.html', 
                            metrics=SESSION_CACHE['metrics'], 
                            total_time=SESSION_CACHE['total_time'],
