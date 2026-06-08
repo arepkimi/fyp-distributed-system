@@ -120,7 +120,7 @@ def cluster_management():
             req = urllib.request.Request(url)
             req.add_header("Authorization", f"Bearer {token}")
             
-            # Trust internal routing loops safely without custom local SSL configuration maps
+            # Trust internal routing loops safely
             ctx = ssl.create_default_context()
             ctx.check_hostname = False
             ctx.verify_mode = ssl.CERT_NONE
@@ -134,7 +134,7 @@ def cluster_management():
                     
                     pod_name = metadata.get("name")
                     
-                    # 🌟 FIX: Check if Kubernetes has initialized deletion workflows on this pod
+                    # 🌟 FIX: Explicitly check if a deletion timestamp exists to capture "Terminating" pods
                     if metadata.get("deletionTimestamp") is not None:
                         pod_status = "Terminating"
                     else:
@@ -197,74 +197,6 @@ def nuke_target():
         except Exception as e:
             print(f"[ORCHESTRATION FAULT] REST engine deletion call failed: {e}")
             
-    return redirect(url_for('cluster_management'))
-
-
-# 🌟 STEP 5: AUTOMATED DEPLOYMENT SCALE SYNC ENGINE (EXCLUDES FRONTEND GATEWAY)
-@app.route('/scale-target', methods=['POST'])
-def scale_target():
-    try:
-        user_replicas = request.form.get('replica_count', '1')
-        print(f"[ORCHESTRATION] Broadscale replication requested. Factor mapping: {user_replicas}")
-
-        # Task A: Alter configuration code stored on disk memory storage
-        yaml_path = 'deploy-all.yaml'
-        if os.path.exists(yaml_path):
-            with open(yaml_path, 'r') as f:
-                sections = f.read().split('---')
-
-            updated_sections = []
-            for section in sections:
-                if 'kind: Deployment' in section:
-                    name_search = re.search(r'name:\s*([a-zA-Z0-9_-]+)', section)
-                    if name_search:
-                        deployment_name = name_search.group(1)
-                        
-                        # EXCLUSION RULE: Leave dashboard configurations completely safe and untouched!
-                        if "dashboard" in deployment_name:
-                            updated_sections.append(section)
-                            continue
-
-                        # Execute pattern match substitutions on replica lines
-                        section = re.sub(r'(replicas:\s*)(\d+)', rf'\g<1>{user_replicas}', section)
-
-                updated_sections.append(section)
-
-            with open(yaml_path, 'w') as f:
-                f.write('---'.join(updated_sections))
-
-        # Task B: Scale via internal REST APIs directly inside Google Cloud networking lanes
-        token_path = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-        namespace_path = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
-        
-        if os.path.exists(token_path) and os.path.exists(namespace_path):
-            with open(token_path, "r") as f:
-                token = f.read().strip()
-            with open(namespace_path, "r") as f:
-                namespace = f.read().strip()
-                
-            target_processing_tiers = ["bw-worker-deployment", "bright-worker-deployment", "blur-worker-deployment"]
-            ctx = ssl.create_default_context()
-            ctx.check_hostname = False
-            ctx.verify_mode = ssl.CERT_NONE
-            
-            for deployment in target_processing_tiers:
-                try:
-                    url = f"https://kubernetes.default.svc/apis/apps/v1/namespaces/{namespace}/deployments/{deployment}/scale"
-                    payload = json.dumps({"spec": {"replicas": int(user_replicas)}}).encode('utf-8')
-                    
-                    req = urllib.request.Request(url, data=payload, method="PUT")
-                    req.add_header("Authorization", f"Bearer {token}")
-                    req.add_header("Content-Type", "application/json")
-                    
-                    with urllib.request.urlopen(req, context=ctx, timeout=5) as response:
-                        print(f"[ORCHESTRATION] Synced replica target scale for deployment: {deployment}")
-                except Exception as scale_inner_err:
-                    print(f"[API SCALE ERROR] Skipping individual component path: {scale_inner_err}")
-
-    except Exception as scale_error:
-        print(f"[ORCHESTRATION FAULT] Scaling execution failed: {scale_error}")
-
     return redirect(url_for('cluster_management'))
 
 
