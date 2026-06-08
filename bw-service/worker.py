@@ -53,7 +53,7 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
 
 def serve():
     # Bumped max_workers pool to 20 threads to handle concurrent round-robin incoming feeds
-    server = grpc.server(futures.ThreadPoolExecutor(max_workers=6))
+    server = grpc.server(futures.ThreadPoolExecutor(max_workers=2))
     photo_pb2_grpc.add_PhotoProcessorServicer_to_server(PhotoProcessor(), server)
     server.add_insecure_port('[::]:50051')
     server.start()
