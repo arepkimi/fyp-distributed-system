@@ -24,7 +24,7 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
             context.set_details("Corrupt image bytes.")
             return photo_pb2.PhotoResponse()
 
-        # --- True Brightness Boost Transformation ---
+        # Brightness Transformation 
         # Scale brightness by multiplying pixel values safely
         result = cv2.convertScaleAbs(img, alpha=1.2, beta=30)
         
@@ -53,7 +53,7 @@ class PhotoProcessor(photo_pb2_grpc.PhotoProcessorServicer):
 
 
 def serve():
-    # Bumped max_workers pool to 20 threads to handle concurrent round-robin incoming feeds
+   
     server = grpc.server(futures.ThreadPoolExecutor(max_workers=20))
     photo_pb2_grpc.add_PhotoProcessorServicer_to_server(PhotoProcessor(), server)
     server.add_insecure_port('[::]:50052')
