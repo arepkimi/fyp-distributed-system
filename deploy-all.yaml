@@ -1,6 +1,5 @@
-# -----------------------------------------------------------------------
-# 1. GATEWAY LAYER: FLASK GATEWAY + ACCELERATED PARALLEL ENGINE
-# -----------------------------------------------------------------------
+
+# 1. GATEWAY LAYER
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -50,9 +49,7 @@ spec:
     targetPort: 5000
 
 ---
-# -----------------------------------------------------------------------
-# 2. MICROSERVICE TIER: STAGE 1 - BLACK & WHITE WORKER REPLICAS
-# -----------------------------------------------------------------------
+# 2. MICROSERVICE 1 - BLACK & WHITE WORKER REPLICAS
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -109,9 +106,9 @@ spec:
     targetPort: 50051
 
 ---
-# -----------------------------------------------------------------------
-# 3. MICROSERVICE TIER: STAGE 2 - BRIGHTNESS BOOST WORKER REPLICAS
-# -----------------------------------------------------------------------
+
+# 3. MICROSERVICE 2 - BRIGHTNESS WORKER REPLICAS
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -168,9 +165,9 @@ spec:
     targetPort: 50052
 
 ---
-# -----------------------------------------------------------------------
-# 4. MICROSERVICE TIER: STAGE 3 - GAUSSIAN BLUR WORKER PODS
-# -----------------------------------------------------------------------
+
+# 4. MICROSERVICE  3 - BLUR WORKER PODS
+
 apiVersion: apps/v1
 kind: Deployment
 metadata:
