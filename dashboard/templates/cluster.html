@@ -199,10 +199,10 @@
                     </td>
                     <td class="pod-age">{{ container.age }}</td>
                     <td style="text-align: right;">
-                        <form action="/nuke-target" method="POST" style="margin:0;" onsubmit="return confirm('Execute instant delete stream on pod: {{ container.name }}?');">
-                            <input type="hidden" name="pod_name" value="{{ container.name }}">
-                            <button type="submit" class="btn-nuke">💥 Nuke Pod</button>
-                        </form>
+                       <form action="/nuke-target" method="POST" style="margin:0;" onsubmit="return confirm('Execute instant delete stream on pod: {{ container.name }}?');">
+                        <input type="hidden" name="pod_name" value="{{ container.name }}">
+                        <button type="submit" class="btn-nuke">💥 Nuke Pod</button>
+                    </form>
                     </td>
                 </tr>
                 {% endfor %}
