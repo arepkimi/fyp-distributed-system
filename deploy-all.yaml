@@ -55,7 +55,7 @@ kind: Deployment
 metadata:
   name: bw-worker-deployment
 spec:
-  replicas: 2 # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
+  replicas: 1 # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
   selector:
     matchLabels:
       app: bw-worker
@@ -114,7 +114,7 @@ kind: Deployment
 metadata:
   name: bright-worker-deployment
 spec:
-  replicas: 2  # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
+  replicas: 1  # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
   selector:
     matchLabels:
       app: bright-worker
@@ -173,7 +173,7 @@ kind: Deployment
 metadata:
   name: blur-worker-deployment
 spec:
-  replicas: 2 # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
+  replicas: 1 # <-- CHANGE THIS NUMBER DIRECTLY TO 2, 3, OR 4 WHEN YOU TEST REPLICAS
   selector:
     matchLabels:
       app: blur-worker
